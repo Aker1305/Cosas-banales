@@ -1,49 +1,44 @@
 @echo off
 REM ============================================
-REM   LIMPIEZA EXTREMA WINDOWS 11 - OPTIMIZADO
-REM   By Alberto | Script Combinado v2.1
-REM   Limpieza exhaustiva y segura del sistema
+REM   LIMPIEZA EXTREMA WINDOWS 11 - v2.2
+REM   By Alberto | Script Optimizado
 REM ============================================
 
 setlocal enabledelayedexpansion
+color 1F
 
 REM DETECTAR SI ESTÁ EJECUTÁNDOSE COMO ADMIN
-openfiles >nul 2>&1
+whoami /groups | find /i "S-1-16-12288" >nul
 if errorlevel 1 (
+    cls
     echo.
     echo ============================================
     echo   SOLICITANDO PERMISOS DE ADMINISTRADOR
     echo ============================================
     echo.
-    echo [!] Este script requiere permisos de administrador.
+    echo [!] Se requieren permisos de administrador.
+    echo.
+    echo Acepte el aviso de UAC cuando aparezca...
     echo.
 
-    REM Crear un archivo VBS temporal para elevación
-    setlocal DisableDelayedExpansion
-    set "batchPath=%~0"
-    setlocal EnableDelayedExpansion
+    REM Crear archivo batch temporal en Windows\Temp
+    set "batchfile=%~0"
+    set "tempbat=%tmp%\cleanup_temp_%random%.bat"
 
-    cd /d "%~dp0"
+    REM Copiar este script al temp
+    copy /Y "%batchfile%" "%tempbat%" >nul 2>&1
 
-    REM Crear script VBS para elevar permisos
-    (
-        echo Set objShell = CreateObject("Shell.Application"^)
-        echo objShell.ShellExecute "cmd.exe", "/c """ & !batchPath! & """", "", "runas", 1
-    ) > "%temp%\elevate.vbs"
+    REM Ejecutar con privilegios elevados usando mshta
+    mshta vbscript:CreateObject("Shell.Application").ShellExecute("%tempbat%","","",""runas"",1)(window.close)
 
-    echo [+] Abriendo nueva ventana con permisos elevados...
-    cscript //nologo "%temp%\elevate.vbs"
-
-    REM Limpiar archivo temporal
-    del "%temp%\elevate.vbs" >nul 2>&1
-
+    REM Limpiar
+    timeout /t 2 >nul
+    del /f /q "%tempbat%" >nul 2>&1
     exit /b
 )
 
-REM AHORA SÍ TENEMOS PERMISOS DE ADMIN
-color 1F
+REM AHORA SÍ TENEMOS PERMISOS - EMPEZAR LA LIMPIEZA
 cls
-
 echo.
 echo ============================================
 echo   LIMPIEZA EXTREMA WINDOWS 11
@@ -54,24 +49,20 @@ echo [OK] Permisos de administrador confirmados.
 echo.
 timeout /t 2 /nobreak >nul
 
-REM 2. CREAR PUNTO DE RESTAURACIÓN (RESPALDO DE SEGURIDAD)
+REM 2. CREAR PUNTO DE RESTAURACIÓN
 echo.
 echo ============================================
 echo   CREANDO PUNTO DE RESTAURACION
 echo ============================================
-echo [+] Creando punto de restauracion para seguridad...
+echo [+] Creando punto de seguridad...
 powershell -NoProfile -Command "Checkpoint-Computer -Description 'Respaldo antes de limpieza extrema' -RestorePointType 'MODIFY_SETTINGS'" 2>nul
-if %errorlevel% equ 0 (
-    echo [OK] Punto de restauracion creado exitosamente.
-) else (
-    echo [!] No se pudo crear punto (puede continuar).
-)
+echo [OK] Punto creado.
 timeout /t 2 /nobreak >nul
 
-REM 3. DETENER SERVICIOS BLOQUEANTES
+REM 3. DETENER SERVICIOS
 echo.
 echo ============================================
-echo   DETENIENDO SERVICIOS Y PROCESOS
+echo   DETENIENDO SERVICIOS
 echo ============================================
 echo [+] Deteniendo OneDrive...
 taskkill /F /IM OneDrive.exe >nul 2>&1
@@ -80,60 +71,56 @@ echo [+] Deteniendo Windows Update...
 net stop wuauserv >nul 2>&1
 net stop bits >nul 2>&1
 
-echo [+] Deteniendo servicio de busqueda...
+echo [+] Deteniendo búsqueda...
 net stop WSearch >nul 2>&1
 
 echo [+] Deteniendo Superfetch...
 net stop SysMain >nul 2>&1
 
 echo [OK] Servicios detenidos.
-timeout /t 2 /nobreak >nul
+timeout /t 1 /nobreak >nul
 
-REM 4. LIMPIAR TEMPORALES DE USUARIO Y SISTEMA
+REM 4. LIMPIAR TEMPORALES
 echo.
 echo ============================================
 echo   LIMPIANDO ARCHIVOS TEMPORALES
 echo ============================================
-echo [+] Limpiando TEMP de usuario...
+echo [+] TEMP usuario...
 del /s /f /q "%temp%\*.*" >nul 2>&1
 for /d %%x in ("%temp%\*") do @rd /s /q "%%x" >nul 2>&1
 
-echo [+] Limpiando TEMP del sistema...
+echo [+] TEMP sistema...
 del /s /f /q "C:\Windows\Temp\*.*" >nul 2>&1
 for /d %%x in ("C:\Windows\Temp\*") do @rd /s /q "%%x" >nul 2>&1
 
-echo [+] Limpiando Windows.old...
+echo [+] Windows.old...
 rmdir /s /q "C:\Windows.old" >nul 2>&1
 
-echo [OK] Temporales eliminados.
-timeout /t 2 /nobreak >nul
+echo [OK] Temporales limpios.
+timeout /t 1 /nobreak >nul
 
-REM 5. LIMPIAR CACHE DE WINDOWS UPDATE
+REM 5. LIMPIAR WINDOWS UPDATE
 echo.
 echo ============================================
-echo   LIMPIANDO CACHE DE WINDOWS UPDATE
+echo   LIMPIANDO WINDOWS UPDATE
 echo ============================================
-echo [+] Eliminando descargas de actualizar...
+echo [+] Eliminando descargas...
 del /s /f /q "C:\Windows\SoftwareDistribution\Download\*.*" >nul 2>&1
 for /d %%x in ("C:\Windows\SoftwareDistribution\Download\*") do @rd /s /q "%%x" >nul 2>&1
 
 echo [+] Limpiando DataStore...
 del /s /f /q "C:\Windows\SoftwareDistribution\DataStore\*.*" >nul 2>&1
-for /d %%x in ("C:\Windows\SoftwareDistribution\DataStore\*") do @rd /s /q "%%x" >nul 2>&1
 
 echo [OK] Windows Update limpio.
 timeout /t 1 /nobreak >nul
 
-REM 6. LIMPIAR LOGS DEL SISTEMA
+REM 6. LIMPIAR LOGS
 echo.
 echo ============================================
-echo   ELIMINANDO REGISTROS DE EVENTOS
+echo   ELIMINANDO REGISTROS
 echo ============================================
 echo [+] Limpiando logs...
 del /s /f /q "C:\Windows\Logs\*.*" >nul 2>&1
-for /d %%x in ("C:\Windows\Logs\*") do @rd /s /q "%%x" >nul 2>&1
-
-echo [+] Limpiando archivos de eventos...
 del /s /f /q "C:\Windows\System32\winevt\Logs\*.evtx" >nul 2>&1
 
 echo [OK] Logs eliminados.
@@ -144,129 +131,116 @@ echo.
 echo ============================================
 echo   LIMPIANDO PREFETCH
 echo ============================================
-echo [+] Eliminando archivos de Prefetch...
+echo [+] Eliminando Prefetch...
 del /s /f /q "C:\Windows\Prefetch\*.*" >nul 2>&1
-for /d %%x in ("C:\Windows\Prefetch\*") do @rd /s /q "%%x" >nul 2>&1
 
 echo [OK] Prefetch limpio.
 timeout /t 1 /nobreak >nul
 
-REM 8. LIMPIAR CACHÉ DE MINIATURAS
+REM 8. LIMPIAR CACHÉ
 echo.
 echo ============================================
-echo   LIMPIANDO CACHE DE MINIATURAS
+echo   LIMPIANDO CACHE
 echo ============================================
-echo [+] Eliminando caché de miniaturas...
+echo [+] Caché de miniaturas...
 del /s /f /q "%LocalAppData%\Microsoft\Windows\Explorer\thumbcache*.*" >nul 2>&1
 
-echo [OK] Cache de miniaturas limpio.
-timeout /t 1 /nobreak >nul
-
-REM 9. LIMPIAR CACHÉ DE APLICACIONES
-echo.
-echo ============================================
-echo   LIMPIANDO CACHE DE APLICACIONES
-echo ============================================
-echo [+] Limpiando AppData Temp...
+echo [+] AppData Temp...
 del /s /f /q "%LocalAppData%\Temp\*.*" >nul 2>&1
-for /d %%x in ("%LocalAppData%\Temp\*") do @rd /s /q "%%x" >nul 2>&1
 
-echo [OK] Cache de aplicaciones limpio.
+echo [OK] Cache limpio.
 timeout /t 1 /nobreak >nul
 
-REM 10. LIMPIAR VOLCADOS DE MEMORIA
+REM 9. LIMPIAR VOLCADOS DE MEMORIA
 echo.
 echo ============================================
-echo   ELIMINANDO VOLCADOS DE MEMORIA
+echo   ELIMINANDO VOLCADOS
 echo ============================================
-echo [+] Eliminando volcados de memoria...
+echo [+] Eliminando volcados...
 del /s /f /q "C:\Windows\MEMORY.DMP" >nul 2>&1
-
-echo [+] Eliminando minidumps...
 del /s /f /q "C:\Windows\Minidump\*.*" >nul 2>&1
-for /d %%x in ("C:\Windows\Minidump\*") do @rd /s /q "%%x" >nul 2>&1
 
 echo [OK] Volcados eliminados.
 timeout /t 1 /nobreak >nul
 
-REM 11. LIMPIAR WINSXS (LIMPIEZA PROFUNDA)
+REM 10. DISM CLEANUP
 echo.
 echo ============================================
-echo   LIMPIEZA PROFUNDA WINSXS
+echo   LIMPIEZA DISM (puede tardar...)
 echo ============================================
-echo [+] Iniciando DISM Cleanup (esto puede tardar)...
+echo [+] Iniciando DISM...
 Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase >nul 2>&1
-echo [OK] DISM Cleanup completado.
 
+echo [OK] DISM completado.
 timeout /t 2 /nobreak >nul
 
-REM 12. ELIMINAR ACTUALIZACIONES SUPERCEDIDAS
+REM 11. ACTUALIZACIONES ANTIGUAS
 echo.
 echo ============================================
-echo   ELIMINANDO ACTUALIZACIONES SUPERCEDIDAS
+echo   ELIMINANDO ACTUALIZACIONES ANTIGUAS
 echo ============================================
-echo [+] Limpiando actualizaciones antiguas...
+echo [+] Limpiando...
 dism /online /cleanup-image /spsuperseded >nul 2>&1
-echo [OK] Actualizaciones antiguas eliminadas.
 
+echo [OK] Actualizaciones antiguas eliminadas.
 timeout /t 1 /nobreak >nul
 
-REM 13. BORRAR PUNTOS DE RESTAURACIÓN ANTIGUOS
+REM 12. BORRAR PUNTOS DE RESTAURACIÓN ANTIGUOS
 echo.
 echo ============================================
 echo   ELIMINANDO PUNTOS ANTIGUOS
 echo ============================================
-echo [+] Eliminando volumenes espejo...
+echo [+] Eliminando puntos viejos...
 vssadmin delete shadows /all /quiet >nul 2>&1
-echo [OK] Puntos de restauracion antiguos eliminados.
 
+echo [OK] Puntos antiguos eliminados.
 timeout /t 1 /nobreak >nul
 
-REM 14. COMPACTAR SISTEMA (COMPACTOS)
+REM 13. COMPACTOS
 echo.
 echo ============================================
-echo   COMPRIMIENDO ARCHIVOS DEL SISTEMA
+echo   COMPRIMIENDO SISTEMA (puede tardar...)
 echo ============================================
-echo [+] Activando CompactOS (esto puede tardar)...
+echo [+] Activando CompactOS...
 compact.exe /CompactOS:always >nul 2>&1
-echo [OK] CompactOS completado.
 
+echo [OK] CompactOS completado.
 timeout /t 2 /nobreak >nul
 
-REM 15. EJECUTAR TRIM EN SSD
+REM 14. TRIM
 echo.
 echo ============================================
-echo   OPTIMIZANDO SSD - TRIM
+echo   OPTIMIZANDO SSD
 echo ============================================
-echo [+] Ejecutando TRIM (esto puede tardar)...
+echo [+] Ejecutando TRIM...
 defrag C: /L >nul 2>&1
+
 echo [OK] TRIM completado.
-
 timeout /t 1 /nobreak >nul
 
-REM 16. LIMPIAR CACHÉ DNS
+REM 15. DNS
 echo.
 echo ============================================
-echo   LIMPIANDO CACHE DNS
+echo   LIMPIANDO DNS
 echo ============================================
-echo [+] Vaciando caché DNS...
+echo [+] Limpiando cache DNS...
 ipconfig /flushdns >nul 2>&1
-echo [OK] Caché DNS limpiado.
 
+echo [OK] DNS limpio.
 timeout /t 1 /nobreak >nul
 
-REM 17. VACIAR PAPELERA DE RECICLAJE
+REM 16. PAPELERA
 echo.
 echo ============================================
-echo   VACIANDO PAPELERA DE RECICLAJE
+echo   VACIANDO PAPELERA
 echo ============================================
 echo [+] Vaciando papelera...
 powershell -NoProfile -Command "Clear-RecycleBin -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
-echo [OK] Papelera vaciada.
 
+echo [OK] Papelera vaciada.
 timeout /t 1 /nobreak >nul
 
-REM 18. REINICIAR SERVICIOS
+REM 17. REINICIAR SERVICIOS
 echo.
 echo ============================================
 echo   REINICIANDO SERVICIOS
@@ -275,7 +249,7 @@ echo [+] Reiniciando Windows Update...
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
 
-echo [+] Reiniciando servicio de busqueda...
+echo [+] Reiniciando búsqueda...
 net start WSearch >nul 2>&1
 
 echo [+] Reiniciando Superfetch...
@@ -284,26 +258,31 @@ net start SysMain >nul 2>&1
 echo [OK] Servicios reiniciados.
 timeout /t 2 /nobreak >nul
 
-REM 19. REINICIAR EXPLORADOR
+REM 18. REINICIAR EXPLORADOR
 echo.
 echo ============================================
 echo   FINALIZANDO
 echo ============================================
-echo [+] Reiniciando Explorador de Windows...
+echo [+] Reiniciando Explorador...
 start explorer.exe >nul 2>&1
 
+timeout /t 1 /nobreak >nul
+
+REM FINALIZACIÓN
+cls
 echo.
 echo ============================================
-echo   [OK] LIMPIEZA COMPLETADA CON EXITO
+echo   LIMPIEZA COMPLETADA CON EXITO
 echo ============================================
 echo.
 echo [OK] Tu PC ha sido optimizado al maximo
-echo [OK] Se creo un punto de restauracion al inicio
-echo [OK] Todos los servicios han sido reiniciados
+echo [OK] Se creo punto de restauracion
+echo [OK] Todos los servicios reiniciados
 echo.
-echo RECOMENDACIONES:
-echo  - Reinicia el PC para ver los cambios totales
-echo  - La proxima vez tardara mas en arrancar (caché)
+echo IMPORTANTE:
+echo  - Reinicia el PC para mejores resultados
+echo  - El siguiente arranque sera mas lento
+echo  - La caché se renueva automaticamente
 echo.
 echo.
 
