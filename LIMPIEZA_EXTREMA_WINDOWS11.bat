@@ -2,116 +2,104 @@
 title LIMPIEZA EXTREMA WINDOWS 11 - By Alberto
 color 1F
 
-REM Verificar permisos de administrador
+:: 1. Forzar ejecucion como administrador
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo.
     echo Solicitando permisos de administrador...
-    echo.
-    powershell -Command "Start-Process -FilePath '%0' -Verb RunAs"
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
     exit /b
 )
 
-REM AHORA TENEMOS PERMISOS - COMENZAR LIMPIEZA
-cls
+cd /d "%~dp0"
+
 echo ============================================
-echo   LIMPIEZA EXTREMA WINDOWS 11 - By Alberto
+echo   LIMPIEZA EXTREMA WINDOWS 11
 echo   Optimizacion total del sistema
 echo ============================================
 echo.
 
-REM 1. Cerrar procesos que bloquean archivos
-echo Cerrando procesos innecesarios...
+:: 2. Cerrar procesos que bloquean archivos
+echo [1/16] Cerrando procesos que bloquean archivos...
 taskkill /F /IM OneDrive.exe >nul 2>&1
 taskkill /F /IM explorer.exe >nul 2>&1
 
-REM 2. Crear punto de restauracion
-echo Creando punto de restauracion...
-powershell -NoProfile -Command "Checkpoint-Computer -Description 'Respaldo antes de limpieza extrema' -RestorePointType 'MODIFY_SETTINGS'" 2>nul
+:: 3. Temporales del usuario y del sistema
+echo [2/16] Limpiando temporales...
+del /s /f /q "%temp%\*.*" >nul 2>&1
+for /d %%x in ("%temp%\*") do rd /s /q "%%x" >nul 2>&1
+del /s /f /q "C:\Windows\Temp\*.*" >nul 2>&1
+for /d %%x in ("C:\Windows\Temp\*") do rd /s /q "%%x" >nul 2>&1
 
-REM 3. Limpiar temporales del sistema y usuario
-echo Limpiando temporales...
-del /s /f /q %temp%\*.* >nul 2>&1
-del /s /f /q C:\Windows\Temp\*.* >nul 2>&1
-
-REM 4. Limpiar cache de Windows Update
-echo Limpiando Windows Update...
+:: 4. Cache de Windows Update
+echo [3/16] Limpiando cache de Windows Update...
 net stop wuauserv >nul 2>&1
 net stop bits >nul 2>&1
-del /s /f /q C:\Windows\SoftwareDistribution\Download\*.* >nul 2>&1
-del /s /f /q C:\Windows\SoftwareDistribution\DataStore\*.* >nul 2>&1
+del /s /f /q "C:\Windows\SoftwareDistribution\Download\*.*" >nul 2>&1
+for /d %%x in ("C:\Windows\SoftwareDistribution\Download\*") do rd /s /q "%%x" >nul 2>&1
+del /s /f /q "C:\Windows\SoftwareDistribution\DataStore\*.*" >nul 2>&1
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
 
-REM 5. Limpiar logs del sistema
-echo Limpiando logs...
-del /s /f /q C:\Windows\Logs\*.* >nul 2>&1
-del /s /f /q C:\Windows\System32\winevt\Logs\*.* >nul 2>&1
+:: 5. Logs del sistema y registros de eventos
+echo [4/16] Limpiando logs y registros de eventos...
+del /s /f /q "C:\Windows\Logs\*.*" >nul 2>&1
+for /f "tokens=*" %%G in ('wevtutil el') do wevtutil cl "%%G" >nul 2>&1
 
-REM 6. Limpiar Prefetch
-echo Limpiando Prefetch...
-del /s /f /q C:\Windows\Prefetch\*.* >nul 2>&1
+:: 6. Prefetch
+echo [5/16] Limpiando Prefetch...
+del /s /f /q "C:\Windows\Prefetch\*.*" >nul 2>&1
 
-REM 7. Limpiar miniaturas
-echo Limpiando cache de miniaturas...
-del /s /f /q %LocalAppData%\Microsoft\Windows\Explorer\thumbcache*.* >nul 2>&1
+:: 7. Cache de miniaturas
+echo [6/16] Limpiando cache de miniaturas...
+del /f /q "%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db" >nul 2>&1
 
-REM 8. Limpiar restos de drivers
-echo Eliminando restos de drivers antiguos...
-pnputil /enum-drivers | findstr /i "oem" > drivers.txt
-for /f %%i in (drivers.txt) do pnputil /delete-driver %%i /uninstall /force >nul 2>&1
-del drivers.txt >nul 2>&1
+:: 8. Volcados de memoria e informes de errores
+echo [7/16] Eliminando volcados de memoria e informes de errores...
+del /f /q "C:\Windows\MEMORY.DMP" >nul 2>&1
+del /s /f /q "C:\Windows\Minidump\*.*" >nul 2>&1
+del /s /f /q "C:\ProgramData\Microsoft\Windows\WER\*.*" >nul 2>&1
 
-REM 9. Limpiar volcados de memoria
-echo Eliminando volcados de memoria...
-del /s /f /q C:\Windows\MEMORY.DMP >nul 2>&1
-del /s /f /q C:\Windows\Minidump\*.* >nul 2>&1
+:: 9. Papelera de reciclaje
+echo [8/16] Vaciando papelera...
+powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
 
-REM 10. Limpieza profunda WinSxS
-echo Limpieza profunda WinSxS...
-Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase >nul 2>&1
-
-REM 11. Borrar puntos de restauracion antiguos
-echo Borrando puntos de restauracion antiguos...
-vssadmin delete shadows /all /quiet >nul 2>&1
-
-REM 12. Borrar backups de actualizaciones
-echo Eliminando backups de actualizaciones...
-dism /online /cleanup-image /spsuperseded >nul 2>&1
-
-REM 13. Compactar sistema (CompactOS)
-echo Activando CompactOS...
-compact.exe /CompactOS:always >nul 2>&1
-
-REM 14. Optimizar SSD (TRIM)
-echo Ejecutando TRIM...
-defrag C: /L >nul 2>&1
-
-REM 15. Flush DNS
-echo Limpiando cache DNS...
+:: 10. Cache DNS
+echo [9/16] Limpiando cache DNS...
 ipconfig /flushdns >nul 2>&1
 
-REM 16. Limpiar AppData Temp
-echo Limpiando AppData temporal...
-del /s /f /q "%LocalAppData%\Temp\*.*" >nul 2>&1
-for /d %%x in ("%LocalAppData%\Temp\*") do @rd /s /q "%%x" >nul 2>&1
+:: 11. Liberador de espacio de Windows (todas las categorias)
+echo [10/16] Ejecutando Liberador de espacio de Windows...
+for /f "tokens=*" %%K in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul ^| findstr /v /i "DownloadsFolder"') do reg add "%%K" /v StateFlags0099 /t REG_DWORD /d 2 /f >nul 2>&1
+cleanmgr /sagerun:99
 
-REM 17. Vaciar papelera
-echo Vaciando papelera...
-powershell -NoProfile -Command "Clear-RecycleBin -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
+:: 12. Limpieza profunda WinSxS
+echo [11/16] Limpieza profunda WinSxS (puede tardar varios minutos)...
+Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase
 
-REM 18. Reiniciar Explorer
-echo Reiniciando Explorer...
-start explorer.exe >nul 2>&1
+:: 13. Puntos de restauracion antiguos
+echo [12/16] Borrando puntos de restauracion antiguos...
+vssadmin delete shadows /all /quiet >nul 2>&1
+
+:: 14. Punto de restauracion nuevo (despues de borrar los antiguos)
+echo [13/16] Creando punto de restauracion limpio...
+powershell -NoProfile -Command "Checkpoint-Computer -Description 'Tras limpieza extrema' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
+
+:: 15. CompactOS
+echo [14/16] Activando CompactOS (puede tardar varios minutos)...
+compact.exe /CompactOS:always
+
+:: 16. TRIM del SSD
+echo [15/16] Ejecutando TRIM...
+defrag C: /L
+
+:: 17. Reiniciar Explorer
+echo [16/16] Reiniciando Explorer...
+start explorer.exe
 
 echo.
 echo ============================================
 echo   LIMPIEZA EXTREMA COMPLETADA
-echo   Tu sistema esta totalmente optimizado
+echo   Reinicia el PC para terminar
 echo ============================================
-echo.
-echo IMPORTANTE: Reinicia tu PC para los mejores resultados
-echo.
-
 pause
 exit /b
