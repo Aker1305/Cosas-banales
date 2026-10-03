@@ -55,7 +55,30 @@ Script batch optimizado que combina las mejores prácticas de limpieza del siste
 
 ## 🚀 Cómo Usar
 
-### Opción 1: Ejecución Normal
+### ⭐ OPCIÓN RECOMENDADA: Archivo VBS
+
+**Usa este método, es el más confiable:**
+
+```
+1. Descarga: LIMPIEZA_EXTREMA_WINDOWS11.vbs
+2. Doble click directo en el archivo
+3. Verás ventana negra con "LIMPIEZA EXTREMA WINDOWS 11"
+4. Se abre aviso de UAC (pantalla azul)
+5. Haces click en "Sí"
+6. Se ejecuta la limpieza completa
+7. Verás el progreso en tiempo real
+8. Al terminar muestra: "LIMPIEZA COMPLETADA CON EXITO"
+9. Cierra la ventana y reinicia el PC
+```
+
+**Ventajas del VBS:**
+- ✅ Doble click directo, sin problemas
+- ✅ Pide permisos correctamente
+- ✅ Se ejecuta siempre completamente
+- ✅ No se cierra prematuramente
+- ✅ Compatible con más sistemas
+
+### Opción 2: Versión Batch (Alternativa)
 ```batch
 1. Descarga el archivo LIMPIEZA_EXTREMA_WINDOWS11.bat
 2. Click derecho → "Ejecutar como administrador"
@@ -64,19 +87,19 @@ Script batch optimizado que combina las mejores prácticas de limpieza del siste
 5. Reinicia tu PC cuando termine
 ```
 
-### Opción 2: Desde PowerShell (Admin)
+### Opción 3: Desde PowerShell (Admin)
 ```powershell
 cd "C:\ruta\del\archivo"
-.\LIMPIEZA_EXTREMA_WINDOWS11.bat
+.\LIMPIEZA_EXTREMA_WINDOWS11.vbs
 ```
 
-### Opción 3: Crear Tarea Programada
+### Opción 4: Crear Tarea Programada
 ```
 1. Abre Programador de tareas
 2. Crear tarea básica
 3. Nombre: "Limpieza Windows 11"
 4. Desencadenador: Diariamente a las 2:00 AM
-5. Acción: Ejecutar programa (LIMPIEZA_EXTREMA_WINDOWS11.bat)
+5. Acción: Ejecutar programa (LIMPIEZA_EXTREMA_WINDOWS11.vbs)
 6. Marcar: "Ejecutar con privilegios más altos"
 ```
 
