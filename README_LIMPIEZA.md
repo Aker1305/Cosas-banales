@@ -23,8 +23,10 @@ El archivo debe conservar finales de línea CRLF. Descárgalo con el botón "Dow
 15. Activa CompactOS.
 16. Ejecuta TRIM en C:.
 17. Reinicia Explorer.
+18. Muestra un informe con lo limpiado en cada paso y el espacio total ganado. Lo guarda en `Informe_limpieza.txt`, en la misma carpeta que el script.
 
 ## Notas
 
 - Windows solo permite crear un punto de restauración cada 24 horas por defecto, así que el del paso 14 puede no crearse.
 - Los archivos que estén en uso no se borran. Es normal.
+- El total del informe es la diferencia de espacio libre en C: entre el inicio y el final. Puede no coincidir con la suma de los pasos: crear el punto de restauración ocupa espacio, y Windows puede escribir archivos mientras el script se ejecuta.
