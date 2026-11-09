@@ -1,0 +1,553 @@
+From bd8f610372e91a7040009469b4cac39c9b31081f Mon Sep 17 00:00:00 2001
+From: aker1305 <aker1305@gmail.com>
+Date: Fri, 6 Nov 2026 13:48:15 +0000
+Subject: [PATCH 1/5] Add spoken set/round announcements (Spanish TTS)
+
+At the start of each work interval the app says the current serie
+(block repetition) and tanda (work interval inside the serie), e.g.
+"Serie 2 de 4. Tanda 3 de 8." Breaks between series announce the next
+serie. Uses flutter_tts with the same volume as the timer sounds.
+
+- New voice/ module: pure announcement builder + TTS announcer
+- RunTimer triggers announcements when the current interval changes
+- Settings: "Voice announcements" switch (stored in SharedPreferences)
+- Android: TTS_SERVICE <queries> entry required on Android 11+
+- Unit tests for the announcement builder
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01X5W6dQ9ZgyihWUfbUDrb4L
+---
+ android/app/src/main/AndroidManifest.xml      |  6 ++
+ .../run_timer/voice/voice_announcements.dart  | 68 ++++++++++++++
+ .../run_timer/voice/voice_announcer.dart      | 90 ++++++++++++++++++
+ lib/features/run_timer/workout.dart           | 29 ++++++
+ lib/features/settings/ui/settings.dart        | 51 ++++++++++
+ pubspec.lock                                  | 24 +++--
+ pubspec.yaml                                  |  1 +
+ test/voice_announcements_test.dart            | 94 +++++++++++++++++++
+ 8 files changed, 355 insertions(+), 8 deletions(-)
+ create mode 100644 lib/features/run_timer/voice/voice_announcements.dart
+ create mode 100644 lib/features/run_timer/voice/voice_announcer.dart
+ create mode 100644 test/voice_announcements_test.dart
+
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index b787ac5..e100931 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -7,6 +7,12 @@
+     <uses-permission
+             android:name="android.permission.RECEIVE_BOOT_COMPLETED"
+             tools:node="remove"/>
++    <!-- Needed on Android 11+ to find the text-to-speech engine (voice announcements). -->
++    <queries>
++        <intent>
++            <action android:name="android.intent.action.TTS_SERVICE" />
++        </intent>
++    </queries>
+    <application
+         android:label="OpenHIIT"
+         android:requestLegacyExternalStorage="true"
+diff --git a/lib/features/run_timer/voice/voice_announcements.dart b/lib/features/run_timer/voice/voice_announcements.dart
+new file mode 100644
+index 0000000..f35c7f6
+--- /dev/null
++++ b/lib/features/run_timer/voice/voice_announcements.dart
+@@ -0,0 +1,68 @@
++import 'package:background_hiit_timer/models/interval_type.dart';
++
++/// Interval names that are not work intervals. Same list used by
++/// generateIntervalDisplaysForTimer to decide what counts as "active".
++const List<String> nonWorkIntervalNames = [
++  "Rest",
++  "Get Ready",
++  "Warmup",
++  "Cooldown",
++  "Break",
++];
++
++/// Builds the Spanish text spoken at the start of each interval.
++///
++/// Terminology:
++/// - "serie": one full pass of the block (timer restarts + 1).
++/// - "tanda": one work interval inside a serie (timer activeIntervals).
++///
++/// Returns a map from interval index (position in [intervals]) to the text
++/// to speak. Intervals without an entry are not announced.
++Map<int, String> buildVoiceAnnouncements({
++  required List<IntervalType> intervals,
++  required int activeIntervalsPerSet,
++  required int totalSets,
++}) {
++  final Map<int, String> announcements = {};
++  if (activeIntervalsPerSet <= 0) return announcements;
++
++  int workCount = 0;
++  for (int i = 0; i < intervals.length; i++) {
++    final String name = intervals[i].name;
++
++    if (!nonWorkIntervalNames.contains(name)) {
++      final int serie = workCount ~/ activeIntervalsPerSet + 1;
++      final int tanda = workCount % activeIntervalsPerSet + 1;
++      workCount++;
++      announcements[i] = workAnnouncement(
++        serie: serie,
++        totalSets: totalSets,
++        tanda: tanda,
++        totalTandas: activeIntervalsPerSet,
++      );
++    } else if (name == "Break" && workCount > 0) {
++      final int nextSerie = workCount ~/ activeIntervalsPerSet + 1;
++      if (nextSerie <= totalSets) {
++        announcements[i] =
++            "Descanso. Siguiente: serie $nextSerie de $totalSets.";
++      }
++    }
++  }
++
++  return announcements;
++}
++
++String workAnnouncement({
++  required int serie,
++  required int totalSets,
++  required int tanda,
++  required int totalTandas,
++}) {
++  final String seriePart = "Serie $serie de $totalSets.";
++  final String tandaPart = "Tanda $tanda de $totalTandas.";
++
++  if (totalSets <= 1 && totalTandas <= 1) return "Adelante.";
++  if (totalSets <= 1) return tandaPart;
++  if (totalTandas <= 1) return seriePart;
++  return "$seriePart $tandaPart";
++}
+diff --git a/lib/features/run_timer/voice/voice_announcer.dart b/lib/features/run_timer/voice/voice_announcer.dart
+new file mode 100644
+index 0000000..725e9e9
+--- /dev/null
++++ b/lib/features/run_timer/voice/voice_announcer.dart
+@@ -0,0 +1,90 @@
++import 'package:flutter/foundation.dart';
++import 'package:flutter_tts/flutter_tts.dart';
++import 'package:openhiit/core/logs/logs.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++
++/// SharedPreferences key for the global on/off switch.
++const String voiceAnnouncementsPrefKey = 'voiceAnnouncements';
++
++/// Speaks set/round announcements with the device text-to-speech engine.
++class VoiceAnnouncer {
++  /// Wait before speaking so the voice does not overlap the interval's
++  /// start sound.
++  static const Duration startDelay = Duration(milliseconds: 600);
++
++  final FlutterTts _tts = FlutterTts();
++  SharedPreferences? _prefs;
++  bool _enabled = true;
++  bool _ready = false;
++  int _lastIndex = -1;
++
++  Future<void> init() async {
++    final prefs = await SharedPreferences.getInstance();
++    _enabled = prefs.getBool(voiceAnnouncementsPrefKey) ?? true;
++    if (!_enabled) {
++      _prefs = prefs;
++      return;
++    }
++
++    try {
++      await _tts.setLanguage('es-ES');
++      await _tts.setSpeechRate(0.5);
++      await _tts.setPitch(1.0);
++      await _tts.awaitSpeakCompletion(false);
++      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
++        // Play over the silent switch and lower other audio while speaking.
++        await _tts.setIosAudioCategory(
++          IosTextToSpeechAudioCategory.playback,
++          [
++            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
++            IosTextToSpeechAudioCategoryOptions.duckOthers,
++          ],
++          IosTextToSpeechAudioMode.defaultMode,
++        );
++      }
++      _ready = true;
++    } catch (e) {
++      Log.error("voice announcer init failed", e);
++    }
++    // Set last: marks init as finished for onInterval().
++    _prefs = prefs;
++  }
++
++  /// Call on every timer update. Speaks only when [intervalIndex] changes
++  /// and there is an announcement for it.
++  void onInterval({
++    required int intervalIndex,
++    required Map<int, String> announcements,
++    required bool paused,
++  }) {
++    // Preferences not loaded yet: do not consume the interval, so it can
++    // still be announced on a later update once init() finishes.
++    if (_prefs == null) return;
++    if (intervalIndex == _lastIndex) return;
++    _lastIndex = intervalIndex;
++
++    if (!_enabled || !_ready || paused) return;
++    final String? text = announcements[intervalIndex];
++    if (text == null) return;
++
++    Future.delayed(startDelay, () async {
++      // Skip if the interval changed again during the delay.
++      if (_lastIndex != intervalIndex) return;
++      try {
++        // Same volume the timer sounds use (0-100, set by the volume slider).
++        final double volume = _prefs?.getDouble('volume') ?? 80;
++        await _tts.setVolume((volume / 100).clamp(0.0, 1.0));
++        await _tts.speak(text);
++      } catch (e) {
++        Log.error("voice announcement failed", e);
++      }
++    });
++  }
++
++  Future<void> dispose() async {
++    _lastIndex = -2;
++    try {
++      await _tts.stop();
++    } catch (_) {}
++  }
++}
+diff --git a/lib/features/run_timer/workout.dart b/lib/features/run_timer/workout.dart
+index 41b5879..69670d1 100644
+--- a/lib/features/run_timer/workout.dart
++++ b/lib/features/run_timer/workout.dart
+@@ -14,6 +14,8 @@ import 'package:openhiit/features/run_timer/widgets/models/timer_list_tile_model
+ import 'package:openhiit/features/run_timer/widgets/portrait_timer_view.dart';
+ import 'package:openhiit/features/run_timer/widgets/timer_card_animated.dart';
+ import 'package:openhiit/features/run_timer/widgets/timer_complete.dart';
++import 'package:openhiit/features/run_timer/voice/voice_announcements.dart';
++import 'package:openhiit/features/run_timer/voice/voice_announcer.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:wakelock_plus/wakelock_plus.dart';
+ 
+@@ -41,6 +43,8 @@ class RunTimerState extends State<RunTimer> {
+   late SharedPreferences prefs;
+   late TimerListModelAnimated<TimerListTileModel> intervalTiles;
+   late TimerListModelAnimated<TimerListTileModel> removedTiles;
++  final VoiceAnnouncer _voice = VoiceAnnouncer();
++  late Map<int, String> _announcements;
+ 
+   @override
+   void initState() {
+@@ -48,6 +52,8 @@ class RunTimerState extends State<RunTimer> {
+     Log.info("starting workout: ${widget.timer.name}");
+     WakelockPlus.enable();
+     loadPreferences();
++    _announcements = _buildAnnouncements();
++    _voice.init();
+     _controllerCenter =
+         ConfettiController(duration: const Duration(seconds: 10));
+     intervalTiles = TimerListModelAnimated<TimerListTileModel>(
+@@ -65,10 +71,27 @@ class RunTimerState extends State<RunTimer> {
+   @override
+   void dispose() {
+     _controllerCenter.dispose();
++    _voice.dispose();
+     WakelockPlus.disable();
+     super.dispose();
+   }
+ 
++  Map<int, String> _buildAnnouncements() {
++    final int totalSets = widget.timer.timeSettings.restarts + 1;
++    int perSet = widget.timer.activeIntervals;
++    if (perSet <= 0) {
++      final int workCount = widget.intervals
++          .where((i) => !nonWorkIntervalNames.contains(i.name))
++          .length;
++      perSet = workCount ~/ totalSets;
++    }
++    return buildVoiceAnnouncements(
++      intervals: widget.intervals,
++      activeIntervalsPerSet: perSet,
++      totalSets: totalSets,
++    );
++  }
++
+   Widget _buildRemovedItem(TimerListTileModel item, BuildContext context,
+       Animation<double> animation) {
+     return TimerCardItemAnimated(
+@@ -135,6 +158,12 @@ class RunTimerState extends State<RunTimer> {
+             controller: _controller,
+             intervals: widget.intervals,
+             build: (_, TimerState timerState) {
++              _voice.onInterval(
++                intervalIndex: timerState.currentInterval,
++                announcements: _announcements,
++                paused: timerState.paused || _paused,
++              );
++
+               while (intervalTiles.length + timerState.currentInterval >
+                   widget.intervals.length) {
+                 removedTiles.insert(removedTiles.length,
+diff --git a/lib/features/settings/ui/settings.dart b/lib/features/settings/ui/settings.dart
+index 98cc8ac..c664071 100644
+--- a/lib/features/settings/ui/settings.dart
++++ b/lib/features/settings/ui/settings.dart
+@@ -2,9 +2,11 @@
+ import 'package:flutter/material.dart';
+ import 'package:flutter_material_color_picker/flutter_material_color_picker.dart';
+ import 'package:openhiit/core/providers/theme_provider/theme_provider.dart';
++import 'package:openhiit/features/run_timer/voice/voice_announcer.dart';
+ import 'package:package_info_plus/package_info_plus.dart';
+ import 'package:provider/provider.dart';
+ import 'package:settings_ui/settings_ui.dart';
++import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:url_launcher/url_launcher.dart';
+ 
+ class SettingsPage extends StatelessWidget {
+@@ -89,6 +91,12 @@ class SettingsPage extends StatelessWidget {
+               ),
+             ],
+           ),
++          SettingsSection(
++            title: const Text('Audio'),
++            tiles: [
++              CustomSettingsTile(child: const _VoiceAnnouncementsTile()),
++            ],
++          ),
+           SettingsSection(
+             title: const Text('About'),
+             tiles: [
+@@ -160,3 +168,46 @@ class SettingsPage extends StatelessWidget {
+     );
+   }
+ }
++
++/// On/off switch for spoken set/round announcements during a workout.
++class _VoiceAnnouncementsTile extends StatefulWidget {
++  const _VoiceAnnouncementsTile();
++
++  @override
++  State<_VoiceAnnouncementsTile> createState() =>
++      _VoiceAnnouncementsTileState();
++}
++
++class _VoiceAnnouncementsTileState extends State<_VoiceAnnouncementsTile> {
++  bool _enabled = true;
++
++  @override
++  void initState() {
++    super.initState();
++    SharedPreferences.getInstance().then((prefs) {
++      if (!mounted) return;
++      setState(() {
++        _enabled = prefs.getBool(voiceAnnouncementsPrefKey) ?? true;
++      });
++    });
++  }
++
++  Future<void> _set(bool value) async {
++    setState(() => _enabled = value);
++    final prefs = await SharedPreferences.getInstance();
++    await prefs.setBool(voiceAnnouncementsPrefKey, value);
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return SwitchListTile(
++      key: const Key('voiceAnnouncementsSwitch'),
++      secondary: const Icon(Icons.record_voice_over_outlined),
++      contentPadding: const EdgeInsets.symmetric(horizontal: 25),
++      title: const Text('Voice announcements'),
++      subtitle: const Text('Speaks the current set and round (Spanish)'),
++      value: _enabled,
++      onChanged: _set,
++    );
++  }
++}
+diff --git a/pubspec.lock b/pubspec.lock
+index 90a879d..8844819 100644
+--- a/pubspec.lock
++++ b/pubspec.lock
+@@ -320,6 +320,14 @@ packages:
+     description: flutter
+     source: sdk
+     version: "0.0.0"
++  flutter_tts:
++    dependency: "direct main"
++    description:
++      name: flutter_tts
++      sha256: ce5eb209b40e95f2f4a1397116c87ab2fcdff32257d04ed7a764e75894c03775
++      url: "https://pub.dev"
++    source: hosted
++    version: "4.2.5"
+   flutter_web_plugins:
+     dependency: transitive
+     description: flutter
+@@ -459,10 +467,10 @@ packages:
+     dependency: transitive
+     description:
+       name: matcher
+-      sha256: dc0b7dc7651697ea4ff3e69ef44b0407ea32c487a39fff6a4004fa585e901861
++      sha256: "31bd099b47c10cd1aeb55146a2d46ce0277630ecef3f7dae54ad7873f36696cd"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.12.19"
++    version: "0.12.20"
+   material_color_utilities:
+     dependency: transitive
+     description:
+@@ -475,10 +483,10 @@ packages:
+     dependency: transitive
+     description:
+       name: meta
+-      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
++      sha256: "307249ce4ff29d58a18e97f6345f539382eb9c9c29ecda628900f31de0443dd9"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "1.17.0"
++    version: "1.19.0"
+   mime:
+     dependency: transitive
+     description:
+@@ -928,10 +936,10 @@ packages:
+     dependency: transitive
+     description:
+       name: test_api
+-      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
++      sha256: "2a122cbe059f8b610d3a5415f42e255b6c17b1f21eee1d960f31080237fb4f11"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.7.10"
++    version: "0.7.12"
+   timezone:
+     dependency: transitive
+     description:
+@@ -1032,10 +1040,10 @@ packages:
+     dependency: transitive
+     description:
+       name: vector_math
+-      sha256: d530bd74fea330e6e364cda7a85019c434070188383e1cd8d9777ee586914c5b
++      sha256: fa49e1674cb84acb900141714e6c6e1f9ae099827c24d141430ff6819db4e1bc
+       url: "https://pub.dev"
+     source: hosted
+-    version: "2.2.0"
++    version: "2.4.4"
+   vm_service:
+     dependency: transitive
+     description:
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 3994dee..72fed40 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -55,6 +55,7 @@ dependencies:
+   unit_number_input: ^0.1.1
+   settings_ui: ^3.0.1
+   package_info_plus: ^9.0.1
++  flutter_tts: ^4.2.5
+ 
+ flutter_launcher_icons:
+   android: "launcher_icon"
+diff --git a/test/voice_announcements_test.dart b/test/voice_announcements_test.dart
+new file mode 100644
+index 0000000..dbb2511
+--- /dev/null
++++ b/test/voice_announcements_test.dart
+@@ -0,0 +1,94 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:openhiit/core/models/timer_sound_settings.dart';
++import 'package:openhiit/core/models/timer_time_settings.dart';
++import 'package:openhiit/core/models/timer_type.dart';
++import 'package:openhiit/core/utils/interval_calculation.dart';
++import 'package:openhiit/features/run_timer/voice/voice_announcements.dart';
++
++TimerType _timer({
++  required int activeIntervals,
++  required int restarts,
++  int breakTime = 0,
++  int warmupTime = 0,
++  int cooldownTime = 0,
++  int getReadyTime = 10,
++}) {
++  final time = TimerTimeSettings.empty()
++    ..workTime = 20
++    ..restTime = 10
++    ..breakTime = breakTime
++    ..warmupTime = warmupTime
++    ..cooldownTime = cooldownTime
++    ..getReadyTime = getReadyTime
++    ..restarts = restarts;
++  return TimerType(
++    id: 't',
++    name: 'test',
++    timerIndex: 0,
++    timeSettings: time,
++    soundSettings: TimerSoundSettings.empty(),
++    activeIntervals: activeIntervals,
++  );
++}
++
++Map<int, String> _build(TimerType t) => buildVoiceAnnouncements(
++      intervals: generateIntervalsFromTimer(t),
++      activeIntervalsPerSet: t.activeIntervals,
++      totalSets: t.timeSettings.restarts + 1,
++    );
++
++void main() {
++  test('announces serie and tanda on each work interval', () {
++    final t = _timer(activeIntervals: 3, restarts: 1, breakTime: 30);
++    final intervals = generateIntervalsFromTimer(t);
++    final a = _build(t);
++
++    final spoken = [
++      for (int i = 0; i < intervals.length; i++)
++        if (a.containsKey(i)) '${intervals[i].name}: ${a[i]}'
++    ];
++
++    expect(spoken, [
++      'Work: Serie 1 de 2. Tanda 1 de 3.',
++      'Work: Serie 1 de 2. Tanda 2 de 3.',
++      'Work: Serie 1 de 2. Tanda 3 de 3.',
++      'Break: Descanso. Siguiente: serie 2 de 2.',
++      'Work: Serie 2 de 2. Tanda 1 de 3.',
++      'Work: Serie 2 de 2. Tanda 2 de 3.',
++      'Work: Serie 2 de 2. Tanda 3 de 3.',
++    ]);
++  });
++
++  test('warmup, rest, cooldown and get ready are not announced', () {
++    final t = _timer(
++        activeIntervals: 2, restarts: 0, warmupTime: 30, cooldownTime: 30);
++    final intervals = generateIntervalsFromTimer(t);
++    final a = _build(t);
++
++    for (final entry in a.entries) {
++      expect(nonWorkIntervalNames.contains(intervals[entry.key].name), false);
++    }
++    expect(a.values.toList(), ['Tanda 1 de 2.', 'Tanda 2 de 2.']);
++  });
++
++  test('custom activity names are announced as work', () {
++    final t = _timer(activeIntervals: 2, restarts: 1)
++      ..activities = ['Burpees', 'Sentadillas'];
++    final a = _build(t);
++    expect(a.values.toList(), [
++      'Serie 1 de 2. Tanda 1 de 2.',
++      'Serie 1 de 2. Tanda 2 de 2.',
++      'Serie 2 de 2. Tanda 1 de 2.',
++      'Serie 2 de 2. Tanda 2 de 2.',
++    ]);
++  });
++
++  test('workAnnouncement short forms', () {
++    expect(
++        workAnnouncement(serie: 2, totalSets: 4, tanda: 1, totalTandas: 1),
++        'Serie 2 de 4.');
++    expect(
++        workAnnouncement(serie: 1, totalSets: 1, tanda: 1, totalTandas: 1),
++        'Adelante.');
++  });
++}
+-- 
+2.43.0
+

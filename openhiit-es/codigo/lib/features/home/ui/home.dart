@@ -1,0 +1,340 @@
+import 'package:flutter/material.dart';
+import 'package:openhiit/core/logs/logs.dart';
+import 'package:openhiit/core/models/timer_type.dart';
+import 'package:openhiit/core/providers/timer_creation_provider/timer_creation_provider.dart';
+import 'package:openhiit/core/providers/timer_provider/timer_provider.dart';
+import 'package:openhiit/features/edit_timer/ui/edit_timer.dart';
+import 'package:openhiit/features/home/ui/widgets/app_bar.dart';
+import 'package:openhiit/features/home/ui/widgets/nav_bar_icon_button.dart';
+import 'package:openhiit/features/import_export_timers/utils/functions.dart';
+import 'package:openhiit/features/reorder_timers/ui/list_timers.dart';
+import 'package:openhiit/features/settings/ui/settings.dart';
+import 'package:openhiit/features/whats_new/ui/whats_new_dialog.dart';
+import 'package:openhiit/features/whats_new/ui/whats_new_items.dart';
+import 'package:openhiit/features/whats_new/utils/whats_new_service.dart';
+import 'package:openhiit/shared/ui/widgets/bottom_app_bar.dart';
+import 'package:provider/provider.dart';
+
+class ListTimersPage extends StatefulWidget {
+  const ListTimersPage({super.key});
+
+  @override
+  State<ListTimersPage> createState() => _ListTimersPageState();
+}
+
+class _ListTimersPageState extends State<ListTimersPage> {
+  late TimerProvider timerProvider;
+  late Future<List<TimerType>> _loadTimersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    Log.info("ListTimersPage opened");
+    timerProvider = Provider.of<TimerProvider>(context, listen: false);
+    _refreshTimers();
+    _handleWhatsNew();
+  }
+
+  bool _isTablet(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    // 600 is a common breakpoint for tablets.
+    return size.shortestSide >= 600;
+  }
+
+  void _refreshTimers() {
+    Log.info("refreshing timer list");
+    setState(() {
+      _loadTimersFuture = timerProvider.loadTimers().then((timers) {
+        Log.debug("loaded ${timers.length} timers");
+        return timers;
+      }).catchError((e) {
+        Log.error("timer load failed", e);
+        return <TimerType>[];
+      });
+    });
+  }
+
+  Future<void> _handleWhatsNew() async {
+    const currentVersion = WhatsNewData.version;
+
+    final shouldShow = await WhatsNewService.shouldShow(currentVersion);
+    Log.debug("WhatsNew check for v$currentVersion → shouldShow=$shouldShow");
+
+    if (shouldShow) {
+      Log.info("showing What's New dialog for version $currentVersion");
+      final items = WhatsNewData.items;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (_) => WhatsNewDialog(
+            version: currentVersion,
+            items: items,
+          ),
+        );
+      });
+
+      await WhatsNewService.markShown(currentVersion);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<TimerType>>(
+      future: _loadTimersFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          Log.error("error fetching timers: ${snapshot.error}");
+          return Scaffold(
+            body:
+                Center(child: Text('Error al cargar los temporizadores: ${snapshot.error}')),
+          );
+        }
+
+        final timers = snapshot.data ?? [];
+        Log.debug("building ListTimersPage with ${timers.length} timers");
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape = constraints.maxWidth > constraints.maxHeight;
+            final isTablet = _isTablet(context);
+
+            Log.debug(
+                "layout mode - isLandscape=$isLandscape, isTablet=$isTablet");
+
+            return Scaffold(
+              extendBodyBehindAppBar: true,
+              extendBody: true,
+              appBar: isTablet
+                  ? PreferredSize(
+                      preferredSize: Size.fromHeight(40.0),
+                      child: AppBar(
+                        toolbarHeight: 1.0,
+                        elevation: 0,
+                      ),
+                    )
+                  : (!isLandscape && !isTablet ? ListTimersAppBar() : null),
+              body: isLandscape || isTablet
+                  ? Row(
+                      children: [
+                        _buildNavRail(timers),
+                        Expanded(
+                          child: SafeArea(
+                            left: false,
+                            child: _buildTimerList(timers),
+                          ),
+                        ),
+                      ],
+                    )
+                  : SafeArea(
+                      child: _buildTimerList(timers),
+                    ),
+              bottomNavigationBar: !isLandscape && !isTablet
+                  ? SafeArea(
+                      top: false,
+                      child: _buildBottomNavBar(timers),
+                    )
+                  : null,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // -------------------
+  // Timer List
+  // -------------------
+  Widget _buildTimerList(List<TimerType> timers) {
+    if (timers.isEmpty) {
+      Log.debug("no saved timers - showing empty state");
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text('No hay temporizadores guardados', style: TextStyle(fontSize: 20)),
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text("Pulsa + para empezar"),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListTimersReorderableList(
+      items: timers,
+      onReorderCompleted: (reorderedItems) {},
+      onListEmpty: (timer) {
+        Log.info("deleted timer '${timer.name}'");
+        _refreshTimers();
+      },
+      onTap: (timer) {
+        Log.info("editing timer '${timer.name}'");
+        context.read<TimerCreationProvider>().setTimer(timer);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => EditTimer(editing: true)),
+        ).then((_) {
+          Log.debug("returned from edit timer screen, now refreshing timers");
+          _refreshTimers();
+        });
+      },
+    );
+  }
+
+  // -------------------
+  // Bottom Navigation Bar (Portrait)
+  // -------------------
+  Widget _buildBottomNavBar(List<TimerType> timers) {
+    return CustomBottomAppBar(
+      children: [
+        Visibility(visible: timers.isNotEmpty, child: const Spacer()),
+        Visibility(
+          visible: timers.isNotEmpty,
+          child: NavBarIconButton(
+            icon: Icons.upload,
+            label: 'Exportar',
+            fontSize: 11,
+            spacing: 0,
+            verticalPadding: 0,
+            onPressed: () {
+              Log.info("export of ${timers.length} timers initiated");
+              onExportPressed(context, timers);
+            },
+          ),
+        ),
+        const Spacer(),
+        NavBarIconButton(
+          icon: Icons.download,
+          label: 'Importar',
+          fontSize: 11,
+          spacing: 0,
+          verticalPadding: 0,
+          onPressed: () async {
+            Log.info("import timers initiated");
+            await onImportPressed(context, timerProvider);
+            Log.debug("import completed, refreshing timers");
+            _refreshTimers();
+          },
+        ),
+        const Spacer(),
+        NavBarIconButton(
+          icon: Icons.add_circle,
+          iconColor: Theme.of(context).colorScheme.primary,
+          label: 'Nuevo',
+          keyLabel: 'new-timer',
+          fontSize: 11,
+          spacing: 0,
+          verticalPadding: 4,
+          onPressed: () {
+            Log.info("creating a new timer");
+            context.read<TimerCreationProvider>().clear();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const EditTimer(editing: false)),
+            ).then((_) {
+              Log.debug(
+                  "returned from edit timer screen, now refreshing timers");
+              _refreshTimers();
+            });
+          },
+        ),
+        const Spacer(),
+      ],
+    );
+  }
+
+  // -------------------
+  // Nav Rail (Landscape / Tablet)
+  // -------------------
+  Widget _buildNavRail(List<TimerType> timers) {
+    return Material(
+      elevation: 12.0,
+      child: SafeArea(
+        right: false,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            const SizedBox(height: 15),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: NavBarIconButton(
+                icon: Icons.add_circle,
+                iconSize: 25,
+                iconColor: Theme.of(context).colorScheme.primary,
+                label: 'Nuevo',
+                verticalPadding: 8,
+                onPressed: () {
+                  context.read<TimerCreationProvider>().clear();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const EditTimer(editing: false)),
+                  ).then((_) => _refreshTimers());
+                },
+              ),
+            ),
+            Visibility(
+                visible: timers.isNotEmpty, child: const SizedBox(height: 12)),
+            Visibility(
+              visible: timers.isNotEmpty,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: NavBarIconButton(
+                  icon: Icons.upload,
+                  iconSize: 25,
+                  label: 'Exportar',
+                  verticalPadding: 8,
+                  onPressed: () {
+                    onExportPressed(context, timers);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: NavBarIconButton(
+                icon: Icons.download,
+                iconSize: 25,
+                label: 'Importar',
+                verticalPadding: 8,
+                onPressed: () async {
+                  await onImportPressed(context, timerProvider);
+                  _refreshTimers();
+                },
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: NavBarIconButton(
+                icon: Icons.settings,
+                iconSize: 25,
+                verticalPadding: 8,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsPage(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

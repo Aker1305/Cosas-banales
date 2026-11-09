@@ -1,0 +1,1433 @@
+From 28ae5fd2e064be0576736bb61d58bc0d209e0a0a Mon Sep 17 00:00:00 2001
+From: aker1305 <aker1305@gmail.com>
+Date: Sat, 7 Nov 2026 18:03:56 +0000
+Subject: [PATCH 2/5] Translate the app UI to Spanish
+
+- All visible texts in Spanish (home, editor, sounds, run screen,
+  settings, import/export, what's new)
+- Built-in interval names (Work, Rest, ...) stay as internal keys and
+  are shown in Spanish through displayIntervalName()
+- Material widgets localized to es_ES via flutter_localizations
+- Integration tests updated to the Spanish texts
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01X5W6dQ9ZgyihWUfbUDrb4L
+---
+ integration_test/advanced_test.dart           |  6 +--
+ integration_test/customize_test.dart          |  2 +-
+ integration_test/edit_timer_test.dart         |  2 +-
+ integration_test/load_test.dart               |  2 +-
+ integration_test/minutes_view_test.dart       |  4 +-
+ integration_test/restart_rounds_test.dart     |  4 +-
+ integration_test/simple_test.dart             | 16 +++---
+ integration_test/utils/tap_buttons.dart       |  2 +-
+ lib/core/utils/display_names.dart             | 18 +++++++
+ lib/features/edit_timer/ui/edit_timer.dart    | 26 +++++-----
+ .../edit_timer/ui/widgets/app_bar.dart        |  6 +--
+ .../edit_timer/ui/widgets/snackbars.dart      |  4 +-
+ .../ui/widgets/start_save_toggle.dart         |  6 +--
+ .../widgets/tabs/editor_tab/editor_tab.dart   |  4 +-
+ .../widgets/interval_list_tile.dart           |  3 +-
+ .../widgets/tabs/general_tab/constants.dart   | 12 ++---
+ .../widgets/tabs/general_tab/general_tab.dart | 50 +++++++++----------
+ .../ui/widgets/tabs/sound_tab/constants.dart  | 28 +++++------
+ .../ui/widgets/tabs/sound_tab/sound_tab.dart  | 12 ++---
+ lib/features/home/ui/constants.dart           |  2 +-
+ lib/features/home/ui/home.dart                | 18 +++----
+ .../ui/export_bottom_sheet.dart               | 14 +++---
+ .../ui/import_copy_dialog.dart                |  6 +--
+ .../import_export_timers/utils/file_util.dart |  2 +-
+ .../utils/import_export_util.dart             | 10 ++--
+ .../reorder_timers/ui/list_timers.dart        |  4 +-
+ .../reorder_timers/ui/widgets/tile.dart       |  8 +--
+ .../run_timer/widgets/control_bar.dart        |  8 +--
+ .../widgets/landscape_control_bar.dart        |  8 +--
+ .../widgets/models/timer_list_tile_model.dart |  2 +-
+ .../widgets/timer_card_animated.dart          |  3 +-
+ .../run_timer/widgets/timer_complete.dart     |  8 +--
+ .../run_timer/widgets/timer_list_tile.dart    |  8 +--
+ lib/features/settings/ui/settings.dart        | 34 ++++++-------
+ .../whats_new/ui/whats_new_dialog.dart        |  4 +-
+ .../whats_new/ui/whats_new_items.dart         | 12 ++---
+ lib/main.dart                                 |  6 +++
+ pubspec.lock                                  | 13 +++++
+ pubspec.yaml                                  |  2 +
+ 39 files changed, 210 insertions(+), 169 deletions(-)
+ create mode 100644 lib/core/utils/display_names.dart
+
+diff --git a/integration_test/advanced_test.dart b/integration_test/advanced_test.dart
+index c41e731..e003642 100644
+--- a/integration_test/advanced_test.dart
++++ b/integration_test/advanced_test.dart
+@@ -119,7 +119,7 @@ void main() {
+         screenShotName: '20_advanced-timer_warmup-interval');
+     // Wait until first work interval is shown..
+     await pumpUntilFound(
+-        tester, find.textContaining("1 of 2"), Duration(seconds: 15), false,
++        tester, find.textContaining("1 de 2"), Duration(seconds: 15), false,
+         screenShotName: '21_advanced-timer_work-interval-1-iteration-1');
+     // Verify that the first exercise 'Push-ups' is shown.
+     // There should be two because there is a restart.
+@@ -127,14 +127,14 @@ void main() {
+         reason: 'First exercise not found');
+     // Wait until first rest interval is gone and second work interval is shown.
+     await pumpUntilFound(
+-        tester, find.textContaining("2 of 2"), Duration(seconds: 15), false,
++        tester, find.textContaining("2 de 2"), Duration(seconds: 15), false,
+         screenShotName: '22_advanced-timer_work-interval-2-iteration-1');
+     // Verify the second exercise 'Sit-ups' is shown.
+     // There should be two because there is a restart.
+     expect(find.textContaining("Sit-ups"), findsAtLeast(1),
+         reason: 'Second exercise not found');
+     // Verify Break is shown in the widget tree
+-    expect(find.textContaining("Break"), findsOneWidget,
++    expect(find.textContaining("Descanso largo"), findsOneWidget,
+         reason: 'Break interval not found');
+     // Wait until all work intervals are done and cooldown is shown. Do this by waiting
+     // until the second and third sets of exercises is gone.
+diff --git a/integration_test/customize_test.dart b/integration_test/customize_test.dart
+index 4aa4623..5a074cf 100644
+--- a/integration_test/customize_test.dart
++++ b/integration_test/customize_test.dart
+@@ -25,7 +25,7 @@ void main() {
+     await tapGotItButton(tester, binding);
+ 
+     // Ensure a timer exists or create one for editing.
+-    if (find.textContaining("No saved timers").evaluate().isNotEmpty) {
++    if (find.textContaining("No hay temporizadores guardados").evaluate().isNotEmpty) {
+       await tapButtonByKey(
+           tester, 'new-timer', '1_customize_create-new', binding, true);
+       await enterTextByKey(tester, 'timer-name', 'Editable Timer',
+diff --git a/integration_test/edit_timer_test.dart b/integration_test/edit_timer_test.dart
+index 31c995e..01ed61d 100644
+--- a/integration_test/edit_timer_test.dart
++++ b/integration_test/edit_timer_test.dart
+@@ -25,7 +25,7 @@ void main() {
+     await tapGotItButton(tester, binding);
+ 
+     // Ensure a timer exists or create one for editing.
+-    if (find.textContaining("No saved timers").evaluate().isNotEmpty) {
++    if (find.textContaining("No hay temporizadores guardados").evaluate().isNotEmpty) {
+       await tapButtonByKey(
+           tester, 'new-timer', '1_edit_create-new', binding, true);
+       await enterTextByKey(
+diff --git a/integration_test/load_test.dart b/integration_test/load_test.dart
+index e4fd385..690e8e0 100644
+--- a/integration_test/load_test.dart
++++ b/integration_test/load_test.dart
+@@ -30,7 +30,7 @@ void main() {
+     );
+ 
+     // Expect "No saved timers" to be visible.
+-    expect(find.textContaining("No saved timers"), findsOneWidget,
++    expect(find.textContaining("No hay temporizadores guardados"), findsOneWidget,
+         reason: 'Expected message not found on home screen');
+   });
+ }
+diff --git a/integration_test/minutes_view_test.dart b/integration_test/minutes_view_test.dart
+index fa9db5c..c72730e 100644
+--- a/integration_test/minutes_view_test.dart
++++ b/integration_test/minutes_view_test.dart
+@@ -30,7 +30,7 @@ void main() {
+     await tapGotItButton(tester, binding);
+ 
+     // Ensure a timer exists or create one for editing.
+-    if (find.textContaining("No saved timers").evaluate().isNotEmpty) {
++    if (find.textContaining("No hay temporizadores guardados").evaluate().isNotEmpty) {
+       await tapButtonByKey(
+           tester, 'new-timer', '1_minutes-view_create-new', binding, true);
+       await enterTextByKey(tester, 'timer-name', 'Editable Timer',
+@@ -83,7 +83,7 @@ void main() {
+           '10_minutes-view_start-timer', binding, true);
+ 
+       // Wait until "Get Ready" is shown.
+-      await pumpUntilFound(tester, find.textContaining("Get Ready"),
++      await pumpUntilFound(tester, find.textContaining("Preparación"),
+           Duration(seconds: 15), false,
+           screenShotName: '11_minutes-view_run-timer');
+ 
+diff --git a/integration_test/restart_rounds_test.dart b/integration_test/restart_rounds_test.dart
+index e625bfa..70bc8ef 100644
+--- a/integration_test/restart_rounds_test.dart
++++ b/integration_test/restart_rounds_test.dart
+@@ -85,10 +85,10 @@ void main() {
+ 
+     // Wait for the final work interval of the first iteration.
+     await pumpUntilFound(
+-        tester, find.textContaining("2 of 2"), Duration(seconds: 30), false,
++        tester, find.textContaining("2 de 2"), Duration(seconds: 30), false,
+         screenShotName: '19_advanced-timer_work-interval-2-iteration-1');
+ 
+-    expect(find.textContaining("Break"), findsNothing,
++    expect(find.textContaining("Descanso largo"), findsNothing,
+         reason: 'Break interval found when it should not be present');
+ 
+     // Exit the running timer.
+diff --git a/integration_test/simple_test.dart b/integration_test/simple_test.dart
+index a3e731b..6cf1b5b 100644
+--- a/integration_test/simple_test.dart
++++ b/integration_test/simple_test.dart
+@@ -65,7 +65,7 @@ void main() {
+     await tapBackArrow(tester, '8_simple-timer_back-arrow', binding);
+ 
+     // Check that the proper total time of 1 minutes is shown.
+-    expect(find.textContaining("Total - 1 minutes"), findsOneWidget);
++    expect(find.textContaining("Total - 1 minutos"), findsOneWidget);
+ 
+     // Key for timer is ${item.name}-${item.timerIndex}.
+     await tapButtonByKey(tester, 'My New Timer-0',
+@@ -84,7 +84,7 @@ void main() {
+     await tapBackArrow(tester, '12_simple-timer_back-arrow', binding);
+ 
+     // Check that the proper total time of 0 minutes is shown.
+-    expect(find.textContaining("Total - 0 minutes"), findsOneWidget);
++    expect(find.textContaining("Total - 0 minutos"), findsOneWidget);
+ 
+     // Key for timer is ${item.name}-${item.timerIndex}.
+     await tapButtonByKey(tester, 'My New Timer-0',
+@@ -99,19 +99,19 @@ void main() {
+ 
+     // Wait until "Get Ready" is shown.
+     await pumpUntilFound(
+-        tester, find.textContaining("Get Ready"), Duration(seconds: 15), false,
++        tester, find.textContaining("Preparación"), Duration(seconds: 15), false,
+         screenShotName: '15_simple-timer_run-new-timer');
+     // Wait until "Get Ready" is gone and first work interval is shown.
+     await pumpUntilGone(
+-        tester, find.textContaining("Get Ready"), Duration(seconds: 15), false,
++        tester, find.textContaining("Preparación"), Duration(seconds: 15), false,
+         screenShotName: '16_simple-timer_work-interval-1');
+     // Wait until first work interval is gone and first rest interval is shown.
+     await pumpUntilGone(
+-        tester, find.textContaining("1 of 2"), Duration(seconds: 15), false,
++        tester, find.textContaining("1 de 2"), Duration(seconds: 15), false,
+         screenShotName: '17_simple-timer_rest-interval-1');
+     // Wait until first rest interval is gone and second work interval is shown.
+     await pumpUntilFound(
+-        tester, find.textContaining("2 of 2"), Duration(seconds: 15), false,
++        tester, find.textContaining("2 de 2"), Duration(seconds: 15), false,
+         screenShotName: '18_simple-timer_work-interval-2');
+     // Make sure the Nice job! screen is shown.
+     await pumpForDuration(tester, Duration(seconds: 10),
+@@ -149,7 +149,7 @@ void main() {
+         reason: 'Timer still visible after swipe delete');
+ 
+     // Verify the snackbar is shown.
+-    expect(find.text('My New Timer deleted'), findsOneWidget,
++    expect(find.text('My New Timer eliminado'), findsOneWidget,
+         reason: 'Delete snackbar not shown');
+ 
+     // Wait for snackbar to dismiss and empty state to appear.
+@@ -162,7 +162,7 @@ void main() {
+         settle: true);
+ 
+     // Verify the empty state is shown.
+-    expect(find.text('No saved timers'), findsOneWidget,
++    expect(find.text('No hay temporizadores guardados'), findsOneWidget,
+         reason: 'Empty state not shown after delete');
+   });
+ }
+diff --git a/integration_test/utils/tap_buttons.dart b/integration_test/utils/tap_buttons.dart
+index f2d1f23..3a1c6ff 100644
+--- a/integration_test/utils/tap_buttons.dart
++++ b/integration_test/utils/tap_buttons.dart
+@@ -41,7 +41,7 @@ Future<void> tapButtonByKey(
+ 
+ Future<void> tapBackArrow(WidgetTester tester, String screenShotName,
+     IntegrationTestWidgetsFlutterBinding binding) async {
+-  final backButtonFinder = find.byTooltip('Back');
++  final backButtonFinder = find.byTooltip('Atrás');
+   expect(backButtonFinder, findsOneWidget, reason: 'Back button not found');
+ 
+   await tester.tap(backButtonFinder);
+diff --git a/lib/core/utils/display_names.dart b/lib/core/utils/display_names.dart
+new file mode 100644
+index 0000000..5b131dd
+--- /dev/null
++++ b/lib/core/utils/display_names.dart
+@@ -0,0 +1,18 @@
++/// Spanish labels for the built-in interval names.
++///
++/// The English names ("Work", "Rest", ...) are internal keys: they are stored
++/// in the database, compared in the timer logic and used by the timer
++/// package. Only convert them for display; never store the result.
++const Map<String, String> _intervalDisplayNames = {
++  "work": "Trabajo",
++  "rest": "Descanso",
++  "get ready": "Preparación",
++  "warmup": "Calentamiento",
++  "cooldown": "Enfriamiento",
++  "break": "Descanso largo",
++};
++
++/// Returns the Spanish label for a built-in interval name, or [name]
++/// unchanged when it is a custom exercise name typed by the user.
++String displayIntervalName(String name) =>
++    _intervalDisplayNames[name.toLowerCase()] ?? name;
+diff --git a/lib/features/edit_timer/ui/edit_timer.dart b/lib/features/edit_timer/ui/edit_timer.dart
+index be067a5..3d59105 100644
+--- a/lib/features/edit_timer/ui/edit_timer.dart
++++ b/lib/features/edit_timer/ui/edit_timer.dart
+@@ -196,7 +196,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+       setButtonState(StartSaveState.save);
+       showErrorToast(
+         context,
+-        'At least one interval must have a duration greater than 0.',
++        'Al menos un intervalo debe durar más de 0 segundos.',
+       );
+       return;
+     }
+@@ -312,7 +312,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+       onSelected: (item) async {
+         if (item == 0) {
+           if (buttonState == StartSaveState.save) {
+-            showInfoToast(context, 'Saving timer before copying...');
++            showInfoToast(context, 'Guardando el temporizador antes de copiarlo...');
+             await _handleSubmit();
+           }
+ 
+@@ -325,7 +325,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+           Navigator.of(context).pop(); // go back after copying
+         } else if (item == 1) {
+           if (buttonState == StartSaveState.save) {
+-            showInfoToast(context, 'Saving timer before exporting...',
++            showInfoToast(context, 'Guardando el temporizador antes de exportarlo...',
+                 margin: 100);
+             await _handleSubmit();
+           }
+@@ -338,16 +338,16 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+           final confirm = await showDialog<bool>(
+             context: context,
+             builder: (ctx) => AlertDialog(
+-              title: const Text('Delete timer?'),
++              title: const Text('¿Eliminar temporizador?'),
+               content: Text(
+-                  'Are you sure you want to delete ${context.read<TimerCreationProvider>().timer.name}? This action cannot be undone.'),
++                  '¿Seguro que quieres eliminar ${context.read<TimerCreationProvider>().timer.name}? Esta acción no se puede deshacer.'),
+               actions: [
+                 TextButton(
+                   onPressed: () {
+                     Log.info("delete timer cancelled by user");
+                     Navigator.of(ctx).pop(false);
+                   },
+-                  child: const Text('Cancel'),
++                  child: const Text('Cancelar'),
+                 ),
+                 TextButton(
+                   onPressed: () {
+@@ -355,7 +355,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+                     Navigator.of(ctx).pop(true);
+                   },
+                   child: const Text(
+-                    'Delete',
++                    'Eliminar',
+                     style: TextStyle(color: Colors.red),
+                   ),
+                 ),
+@@ -381,7 +381,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+             children: const [
+               Icon(Icons.content_copy),
+               SizedBox(width: 8),
+-              Text('Copy'),
++              Text('Copiar'),
+             ],
+           ),
+         ),
+@@ -391,7 +391,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+             children: const [
+               Icon(Icons.share),
+               SizedBox(width: 8),
+-              Text('Export'),
++              Text('Exportar'),
+             ],
+           ),
+         ),
+@@ -401,7 +401,7 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+             children: const [
+               Icon(Icons.delete),
+               SizedBox(width: 8),
+-              Text('Delete'),
++              Text('Eliminar'),
+             ],
+           ),
+         ),
+@@ -461,11 +461,11 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+             labelType: NavigationRailLabelType.all,
+             destinations: const [
+               NavigationRailDestination(
+-                  icon: Icon(Icons.timer), label: Text('General Tab')),
++                  icon: Icon(Icons.timer), label: Text('General')),
+               NavigationRailDestination(
+-                  icon: Icon(Icons.music_note), label: Text('Sound Tab')),
++                  icon: Icon(Icons.music_note), label: Text('Sonidos')),
+               NavigationRailDestination(
+-                  icon: Icon(Icons.fitness_center), label: Text('Edit Tab')),
++                  icon: Icon(Icons.fitness_center), label: Text('Intervalos')),
+             ],
+             trailing: _buildKebabMenu(horizontal: true),
+           ),
+diff --git a/lib/features/edit_timer/ui/widgets/app_bar.dart b/lib/features/edit_timer/ui/widgets/app_bar.dart
+index dcb8aaa..e820b29 100644
+--- a/lib/features/edit_timer/ui/widgets/app_bar.dart
++++ b/lib/features/edit_timer/ui/widgets/app_bar.dart
+@@ -4,7 +4,7 @@ class EditTimerAppBar extends StatefulWidget implements PreferredSizeWidget {
+   final String title;
+   final TabBar? bottom;
+ 
+-  const EditTimerAppBar({super.key, this.title = "Edit Timer", this.bottom});
++  const EditTimerAppBar({super.key, this.title = "Editar temporizador", this.bottom});
+ 
+   @override
+   EditTimerAppBarState createState() => EditTimerAppBarState();
+@@ -33,7 +33,7 @@ class EditTimerAppBarState extends State<EditTimerAppBar> {
+                 children: [
+                   Icon(Icons.copy, size: 20),
+                   SizedBox(width: 8),
+-                  Text('Copy'),
++                  Text('Copiar'),
+                 ],
+               ),
+             ),
+@@ -43,7 +43,7 @@ class EditTimerAppBarState extends State<EditTimerAppBar> {
+                 children: [
+                   Icon(Icons.delete, size: 20),
+                   SizedBox(width: 8),
+-                  Text('Delete'),
++                  Text('Eliminar'),
+                 ],
+               ),
+             ),
+diff --git a/lib/features/edit_timer/ui/widgets/snackbars.dart b/lib/features/edit_timer/ui/widgets/snackbars.dart
+index b7e4fda..816a3f7 100644
+--- a/lib/features/edit_timer/ui/widgets/snackbars.dart
++++ b/lib/features/edit_timer/ui/widgets/snackbars.dart
+@@ -31,7 +31,7 @@ void showErrorToast(
+         ],
+       ),
+       action: SnackBarAction(
+-        label: 'Close',
++        label: 'Cerrar',
+         textColor: Colors.white70,
+         onPressed: () => messenger.hideCurrentSnackBar(),
+       ),
+@@ -70,7 +70,7 @@ void showInfoToast(
+         ],
+       ),
+       action: SnackBarAction(
+-        label: 'Close',
++        label: 'Cerrar',
+         textColor: Colors.white70,
+         onPressed: () => messenger.hideCurrentSnackBar(),
+       ),
+diff --git a/lib/features/edit_timer/ui/widgets/start_save_toggle.dart b/lib/features/edit_timer/ui/widgets/start_save_toggle.dart
+index 558d644..06b2e94 100644
+--- a/lib/features/edit_timer/ui/widgets/start_save_toggle.dart
++++ b/lib/features/edit_timer/ui/widgets/start_save_toggle.dart
+@@ -22,7 +22,7 @@ class StartSaveToggle extends StatelessWidget {
+       StartSaveState.save => (
+           Colors.blue,
+           const Icon(Icons.save),
+-          const Text('Save'),
++          const Text('Guardar'),
+           true,
+         ),
+       StartSaveState.start => (
+@@ -31,7 +31,7 @@ class StartSaveToggle extends StatelessWidget {
+           Shimmer.fromColors(
+             baseColor: Colors.white,
+             highlightColor: const Color.fromARGB(255, 155, 187, 162),
+-            child: const Text('Start'),
++            child: const Text('Iniciar'),
+           ),
+           true,
+         ),
+@@ -43,7 +43,7 @@ class StartSaveToggle extends StatelessWidget {
+             child:
+                 CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+           ),
+-          const Text('Saving'),
++          const Text('Guardando'),
+           false,
+         ),
+     };
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
+index 91270bb..964f7fc 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
+@@ -98,7 +98,7 @@ class EditorTab extends StatelessWidget {
+                             const SizedBox(
+                                 width: 8), // spacing between icon and text
+                             Text(
+-                              "Repeat for ${provider.timer.timeSettings.restarts}x",
++                              "Repetir ${provider.timer.timeSettings.restarts} veces",
+                               style: const TextStyle(
+                                 fontSize: 20,
+                                 fontWeight: FontWeight.bold,
+@@ -128,7 +128,7 @@ class EditorTab extends StatelessWidget {
+             SizedBox(width: 60, height: 60, child: CircularProgressIndicator()),
+             Padding(
+                 padding: EdgeInsets.only(top: 16),
+-                child: Text('Generating intervals...')),
++                child: Text('Generando intervalos...')),
+           ];
+         }
+         return Center(
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/widgets/interval_list_tile.dart b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/widgets/interval_list_tile.dart
+index 6fa0200..93aa85a 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/widgets/interval_list_tile.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/widgets/interval_list_tile.dart
+@@ -1,3 +1,4 @@
++import 'package:openhiit/core/utils/display_names.dart';
+ import 'package:flutter/material.dart';
+ import 'package:openhiit/core/models/interval_display_model.dart';
+ import 'package:openhiit/core/utils/interval_display.dart';
+@@ -77,7 +78,7 @@ class IntervalListTile extends StatelessWidget {
+                     ),
+                   )
+                 : Text(
+-                    interval.name,
++                    displayIntervalName(interval.name),
+                     style: TextStyle(
+                         fontSize: textScaler.scale(24), color: Colors.white),
+                     overflow: TextOverflow.ellipsis,
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/general_tab/constants.dart b/lib/features/edit_timer/ui/widgets/tabs/general_tab/constants.dart
+index a7c6d0b..72e35c9 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/general_tab/constants.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/general_tab/constants.dart
+@@ -1,12 +1,12 @@
+ import 'package:flutter/material.dart';
+ 
+ const List<String> timeTitles = [
+-  'Work',
+-  'Rest',
+-  'Get ready',
+-  'Warm-up',
+-  'Cool-down',
+-  'Break',
++  'Trabajo',
++  'Descanso',
++  'Preparación',
++  'Calentamiento',
++  'Enfriamiento',
++  'Descanso largo',
+ ];
+ 
+ const inputDecoration = InputDecoration(
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/general_tab/general_tab.dart b/lib/features/edit_timer/ui/widgets/tabs/general_tab/general_tab.dart
+index 05cc0d2..177954c 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/general_tab/general_tab.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/general_tab/general_tab.dart
+@@ -46,7 +46,7 @@ class GeneralTab extends StatelessWidget {
+                 textCapitalization: TextCapitalization.words,
+                 style: const TextStyle(fontSize: 24),
+                 decoration: InputDecoration(
+-                  hintText: "Add title",
++                  hintText: "Añadir título",
+                   border: InputBorder.none,
+                   contentPadding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+                 ),
+@@ -57,7 +57,7 @@ class GeneralTab extends StatelessWidget {
+                 },
+                 validator: (value) {
+                   if (value == null || value.trim().isEmpty) {
+-                    return 'Name cannot be empty';
++                    return 'El nombre no puede estar vacío';
+                   }
+                   return null;
+                 },
+@@ -102,11 +102,11 @@ class GeneralTab extends StatelessWidget {
+             ListTile(
+               leading: Icon(Icons.timer_10_select_rounded),
+               key: const Key("timer-display-toggle"),
+-              title: const Text('Timer Display'),
++              title: const Text('Formato del tiempo'),
+               subtitle: Text(provider.timer.showMinutes == 1
+-                  ? "Minutes View"
+-                  : "Seconds View"),
+-              // widget.timer.showMinutes == 1 ? "Minutes View" : "Seconds View",
++                  ? "Vista en minutos"
++                  : "Vista en segundos"),
++              // widget.timer.showMinutes == 1 ? "Vista en minutos" : "Vista en segundos",
+               trailing: Icon(Icons.arrow_forward_ios),
+               onTap: () async {
+                 await showDialog(
+@@ -120,7 +120,7 @@ class GeneralTab extends StatelessWidget {
+                           Column(
+                             children: [
+                               Text(
+-                                "Minutes View",
++                                "Vista en minutos",
+                                 style: TextStyle(
+                                   fontSize: 14,
+                                   fontWeight: FontWeight.bold,
+@@ -141,7 +141,7 @@ class GeneralTab extends StatelessWidget {
+                           Column(
+                             children: [
+                               Text(
+-                                "Seconds View",
++                                "Vista en segundos",
+                                 style: TextStyle(
+                                   fontSize: 14,
+                                   fontWeight: FontWeight.bold,
+@@ -169,7 +169,7 @@ class GeneralTab extends StatelessWidget {
+                             onUnitToggle(true);
+                             Log.debug("Timer display changed to Minutes");
+                           },
+-                          child: const Text('Minutes'),
++                          child: const Text('Minutos'),
+                         ),
+                         TextButton(
+                           key: const Key("seconds-option"),
+@@ -180,7 +180,7 @@ class GeneralTab extends StatelessWidget {
+                             onUnitToggle(false);
+                             Log.debug("Timer display changed to Seconds");
+                           },
+-                          child: const Text('Seconds'),
++                          child: const Text('Segundos'),
+                         ),
+                       ],
+                     );
+@@ -191,8 +191,8 @@ class GeneralTab extends StatelessWidget {
+             Divider(),
+             ListTile(
+               key: const Key("active-intervals"),
+-              title: const Text('Active Intervals'),
+-              subtitle: Text('# of work intervals'),
++              title: const Text('Intervalos de trabajo (tandas)'),
++              subtitle: Text('Nº de intervalos de trabajo por serie'),
+               leading: const Icon(Icons.flag),
+               trailing: SizedBox(
+                 width: 80,
+@@ -226,8 +226,8 @@ class GeneralTab extends StatelessWidget {
+             ),
+             ListTile(
+               key: const Key("work-time"),
+-              title: const Text('Work'),
+-              subtitle: Text('Required'),
++              title: const Text('Trabajo'),
++              subtitle: Text('Obligatorio'),
+               leading: const Icon(Icons.fitness_center),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+@@ -246,8 +246,8 @@ class GeneralTab extends StatelessWidget {
+             ),
+             ListTile(
+               key: const Key("rest-time"),
+-              title: const Text('Rest'),
+-              subtitle: Text('Required'),
++              title: const Text('Descanso'),
++              subtitle: Text('Obligatorio'),
+               leading: const Icon(Icons.timer),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+@@ -267,8 +267,8 @@ class GeneralTab extends StatelessWidget {
+             Divider(),
+             ListTile(
+               key: const Key("get-ready"),
+-              title: const Text('Get ready'),
+-              subtitle: Text('Optional, default 10s'),
++              title: const Text('Preparación'),
++              subtitle: Text('Opcional, 10 s por defecto'),
+               leading: const Icon(Icons.flag),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+@@ -287,8 +287,8 @@ class GeneralTab extends StatelessWidget {
+             ),
+             ListTile(
+               key: const Key("warm-up"),
+-              title: const Text('Warm-up'),
+-              subtitle: Text('Optional'),
++              title: const Text('Calentamiento'),
++              subtitle: Text('Opcional'),
+               leading: const Icon(Icons.emoji_people),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+@@ -307,8 +307,8 @@ class GeneralTab extends StatelessWidget {
+             ),
+             ListTile(
+               key: const Key("cool-down"),
+-              title: const Text('Cool-down'),
+-              subtitle: Text('Optional'),
++              title: const Text('Enfriamiento'),
++              subtitle: Text('Opcional'),
+               leading: const Icon(Icons.ac_unit),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+@@ -327,7 +327,7 @@ class GeneralTab extends StatelessWidget {
+             ),
+             ListTile(
+               key: const Key("restarts"),
+-              title: const Text('Restarts'),
++              title: const Text('Repeticiones (series extra)'),
+               subtitle: Text('Optional, # of restarts'),
+               leading: const Icon(Icons.replay),
+               trailing: SizedBox(
+@@ -362,8 +362,8 @@ class GeneralTab extends StatelessWidget {
+             ListTile(
+               key: const Key("break"),
+               enabled: provider.breakEnabled,
+-              title: const Text('Break'),
+-              subtitle: Text('Optional, between restarts'),
++              title: const Text('Descanso largo'),
++              subtitle: Text('Opcional, entre series'),
+               leading: const Icon(Icons.snooze),
+               trailing: FittedBox(
+                 fit: BoxFit.contain,
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
+index fdb8015..7c24814 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
+@@ -1,18 +1,18 @@
+ const Map<String, String> soundOptions = {
+-  "long-bell": "Long bell",
+-  "countdown-beep": "Countdown beep",
+-  "ding-sequence": "Ding sequence",
++  "long-bell": "Campana larga",
++  "countdown-beep": "Pitido de cuenta atrás",
++  "ding-sequence": "Secuencia de ding",
+   "ding": "Ding",
+-  "halfway-beep2": "Long beep sequence",
+-  "harsh-beep-sequence": "Harsh beep sequence",
+-  "harsh-beep": "Harsh beep",
+-  "horn": "Horn",
+-  "long-halfway-beep": "Blip sequence",
+-  "long-rest-beep": "Quick beep sequence",
+-  "long-whistle": "Long whistle",
++  "halfway-beep2": "Secuencia de pitidos largos",
++  "harsh-beep-sequence": "Secuencia de pitidos fuertes",
++  "harsh-beep": "Pitido fuerte",
++  "horn": "Bocina",
++  "long-halfway-beep": "Secuencia de blips",
++  "long-rest-beep": "Secuencia de pitidos rápidos",
++  "long-whistle": "Silbato largo",
+   "short-halfway-beep": "Blip",
+-  "short-rest-beep": "Beep",
+-  "short-whistle": "Short whistle",
+-  "thunk": "Thunk",
+-  "none": "None"
++  "short-rest-beep": "Pitido",
++  "short-whistle": "Silbato corto",
++  "thunk": "Golpe seco",
++  "none": "Ninguno"
+ };
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/sound_tab.dart b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/sound_tab.dart
+index d01e854..ffb8fdb 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/sound_tab.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/sound_tab.dart
+@@ -76,7 +76,7 @@ class _SoundTabState extends State<SoundTab> {
+       children: [
+         _buildSoundDropdown(
+           keyName: "work-sound",
+-          label: "Work Sound",
++          label: "Sonido de trabajo",
+           initialValue: provider.timer.soundSettings.workSound,
+           onChanged: (value) =>
+               provider.setTimerSoundSettingPart(workSound: value),
+@@ -84,7 +84,7 @@ class _SoundTabState extends State<SoundTab> {
+         const SizedBox(height: 16),
+         _buildSoundDropdown(
+           keyName: "rest-sound",
+-          label: "Rest Sound",
++          label: "Sonido de descanso",
+           initialValue: provider.timer.soundSettings.restSound,
+           onChanged: (value) =>
+               provider.setTimerSoundSettingPart(restSound: value),
+@@ -92,7 +92,7 @@ class _SoundTabState extends State<SoundTab> {
+         const SizedBox(height: 16),
+         _buildSoundDropdown(
+           keyName: "halfway-sound",
+-          label: "Halfway Sound",
++          label: "Sonido a mitad",
+           initialValue: provider.timer.soundSettings.halfwaySound,
+           onChanged: (value) =>
+               provider.setTimerSoundSettingPart(halfwaySound: value),
+@@ -100,7 +100,7 @@ class _SoundTabState extends State<SoundTab> {
+         const SizedBox(height: 16),
+         _buildSoundDropdown(
+           keyName: "countdown-sound",
+-          label: "Countdown Sound",
++          label: "Sonido de cuenta atrás",
+           initialValue: provider.timer.soundSettings.countdownSound,
+           onChanged: (value) =>
+               provider.setTimerSoundSettingPart(countdownSound: value),
+@@ -108,7 +108,7 @@ class _SoundTabState extends State<SoundTab> {
+         const SizedBox(height: 16),
+         _buildSoundDropdown(
+           keyName: "end-sound",
+-          label: "End Sound",
++          label: "Sonido final",
+           initialValue: provider.timer.soundSettings.endSound,
+           onChanged: (value) =>
+               provider.setTimerSoundSettingPart(endSound: value),
+@@ -118,7 +118,7 @@ class _SoundTabState extends State<SoundTab> {
+             provider.timer.timeSettings.restarts > 0) ...[
+           _buildSoundDropdown(
+             keyName: "break-sound",
+-            label: "Break Sound",
++            label: "Sonido de descanso largo",
+             initialValue: provider.timer.soundSettings.breakSound,
+             onChanged: (value) =>
+                 provider.setTimerSoundSettingPart(breakSound: value),
+diff --git a/lib/features/home/ui/constants.dart b/lib/features/home/ui/constants.dart
+index c37f81a..dff38b9 100644
+--- a/lib/features/home/ui/constants.dart
++++ b/lib/features/home/ui/constants.dart
+@@ -1 +1 @@
+-const String aboutText = "OpenHIIT is a free and open-source interval timer.";
++const String aboutText = "OpenHIIT es un temporizador de intervalos libre y de código abierto.";
+diff --git a/lib/features/home/ui/home.dart b/lib/features/home/ui/home.dart
+index aa5edbe..c252ebe 100644
+--- a/lib/features/home/ui/home.dart
++++ b/lib/features/home/ui/home.dart
+@@ -93,7 +93,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+           Log.error("error fetching timers: ${snapshot.error}");
+           return Scaffold(
+             body:
+-                Center(child: Text('Error fetching timers: ${snapshot.error}')),
++                Center(child: Text('Error al cargar los temporizadores: ${snapshot.error}')),
+           );
+         }
+ 
+@@ -160,11 +160,11 @@ class _ListTimersPageState extends State<ListTimersPage> {
+           children: [
+             Padding(
+               padding: EdgeInsets.only(top: 16),
+-              child: Text('No saved timers', style: TextStyle(fontSize: 20)),
++              child: Text('No hay temporizadores guardados', style: TextStyle(fontSize: 20)),
+             ),
+             Padding(
+               padding: EdgeInsets.only(top: 16),
+-              child: Text("Hit the + to get started!"),
++              child: Text("Pulsa + para empezar"),
+             ),
+           ],
+         ),
+@@ -203,7 +203,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+           visible: timers.isNotEmpty,
+           child: NavBarIconButton(
+             icon: Icons.upload,
+-            label: 'Export',
++            label: 'Exportar',
+             fontSize: 11,
+             spacing: 0,
+             verticalPadding: 0,
+@@ -216,7 +216,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+         const Spacer(),
+         NavBarIconButton(
+           icon: Icons.download,
+-          label: 'Import',
++          label: 'Importar',
+           fontSize: 11,
+           spacing: 0,
+           verticalPadding: 0,
+@@ -231,7 +231,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+         NavBarIconButton(
+           icon: Icons.add_circle,
+           iconColor: Theme.of(context).colorScheme.primary,
+-          label: 'New',
++          label: 'Nuevo',
+           keyLabel: 'new-timer',
+           fontSize: 11,
+           spacing: 0,
+@@ -273,7 +273,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+                 icon: Icons.add_circle,
+                 iconSize: 25,
+                 iconColor: Theme.of(context).colorScheme.primary,
+-                label: 'New',
++                label: 'Nuevo',
+                 verticalPadding: 8,
+                 onPressed: () {
+                   context.read<TimerCreationProvider>().clear();
+@@ -294,7 +294,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+                 child: NavBarIconButton(
+                   icon: Icons.upload,
+                   iconSize: 25,
+-                  label: 'Export',
++                  label: 'Exportar',
+                   verticalPadding: 8,
+                   onPressed: () {
+                     onExportPressed(context, timers);
+@@ -308,7 +308,7 @@ class _ListTimersPageState extends State<ListTimersPage> {
+               child: NavBarIconButton(
+                 icon: Icons.download,
+                 iconSize: 25,
+-                label: 'Import',
++                label: 'Importar',
+                 verticalPadding: 8,
+                 onPressed: () async {
+                   await onImportPressed(context, timerProvider);
+diff --git a/lib/features/import_export_timers/ui/export_bottom_sheet.dart b/lib/features/import_export_timers/ui/export_bottom_sheet.dart
+index 240ccb4..2db454e 100644
+--- a/lib/features/import_export_timers/ui/export_bottom_sheet.dart
++++ b/lib/features/import_export_timers/ui/export_bottom_sheet.dart
+@@ -41,8 +41,8 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             result
+                                 ? successSnackbar(
+-                                    'Timer(s) exported successfully.')
+-                                : infoSnackbar('Nothing exported.'),
++                                    'Temporizador(es) exportado(s) correctamente.')
++                                : infoSnackbar('No se ha exportado nada.'),
+                           );
+                         }
+                       } finally {
+@@ -63,7 +63,7 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
+                     Padding(
+                       padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                       child: Text(
+-                        "Save to device",
++                        "Guardar en el dispositivo",
+                         style: TextStyle(fontSize: 18),
+                       ),
+                     ),
+@@ -83,15 +83,15 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
+                           Navigator.pop(context);
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             result
+-                                ? successSnackbar('Timers shared successfully.')
+-                                : infoSnackbar('Share canceled.'),
++                                ? successSnackbar('Temporizadores compartidos correctamente.')
++                                : infoSnackbar('Compartir cancelado.'),
+                           );
+                         }
+                       } catch (_) {
+                         if (context.mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             errorSnackbar(
+-                                'An error occurred while sharing timers.'),
++                                'Se ha producido un error al compartir los temporizadores.'),
+                           );
+                         }
+                       } finally {
+@@ -106,7 +106,7 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
+                     Padding(
+                       padding: EdgeInsets.fromLTRB(15, 0, 0, 0),
+                       child: Text(
+-                        "Share external",
++                        "Compartir con otra app",
+                         style: TextStyle(fontSize: 18),
+                       ),
+                     ),
+diff --git a/lib/features/import_export_timers/ui/import_copy_dialog.dart b/lib/features/import_export_timers/ui/import_copy_dialog.dart
+index 62a1cd9..7ddaa2e 100644
+--- a/lib/features/import_export_timers/ui/import_copy_dialog.dart
++++ b/lib/features/import_export_timers/ui/import_copy_dialog.dart
+@@ -14,16 +14,16 @@ Future<void> showImportDialog(
+       builder: (context) => AlertDialog(
+             title: Text(timerName),
+             content: Text(
+-                'Timer with same ID already exists. Do you want to import a copy of $timerName?'),
++                'Ya existe un temporizador con el mismo ID. ¿Quieres importar una copia de $timerName?'),
+             actions: <Widget>[
+               TextButton(
+-                child: Text('Skip'),
++                child: Text('Omitir'),
+                 onPressed: () {
+                   Navigator.of(context).pop(); // dismiss dialog
+                 },
+               ),
+               TextButton(
+-                child: Text('Import Copy'),
++                child: Text('Importar copia'),
+                 onPressed: () async {
+                   await onConfirm(); // execute callback
+                   if (navigator.mounted) {
+diff --git a/lib/features/import_export_timers/utils/file_util.dart b/lib/features/import_export_timers/utils/file_util.dart
+index 9a62f25..ea9534a 100644
+--- a/lib/features/import_export_timers/utils/file_util.dart
++++ b/lib/features/import_export_timers/utils/file_util.dart
+@@ -44,7 +44,7 @@ class LocalFileUtil {
+     Log.debug('sharing file with ${timers.length} timer(s)');
+     return await Share.shareXFiles(
+       [XFile(file.path)],
+-      text: 'OpenHIIT Export',
++      text: 'Exportación de OpenHIIT',
+       sharePositionOrigin: box.localToGlobal(Offset.zero) & (box.size),
+     );
+   }
+diff --git a/lib/features/import_export_timers/utils/import_export_util.dart b/lib/features/import_export_timers/utils/import_export_util.dart
+index cb096a0..caa59ac 100644
+--- a/lib/features/import_export_timers/utils/import_export_util.dart
++++ b/lib/features/import_export_timers/utils/import_export_util.dart
+@@ -28,7 +28,7 @@ class ImportExportUtil {
+ 
+       if (importedTimers.isEmpty) {
+         scaffoldMessengerKey.currentState
+-            ?.showSnackBar(infoSnackbar('Nothing imported.'));
++            ?.showSnackBar(infoSnackbar('No se ha importado nada.'));
+         return false;
+       } else {
+         await ImportExportUtil.saveImportedTimers(
+@@ -36,9 +36,9 @@ class ImportExportUtil {
+       }
+       return true;
+     } catch (e) {
+-      Log.error("Import failed: $e");
++      Log.error("Error al importar: $e");
+       scaffoldMessengerKey.currentState?.showSnackBar(
+-        errorSnackbar("Import failed: $e"),
++        errorSnackbar("Error al importar: $e"),
+       );
+       return false;
+     }
+@@ -102,8 +102,8 @@ class ImportExportUtil {
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+       messenger?.showSnackBar(
+         importedCount > 0
+-            ? successSnackbar('Successfully imported $importedCount timers.')
+-            : infoSnackbar('Nothing imported.'),
++            ? successSnackbar('Se han importado $importedCount temporizadores.')
++            : infoSnackbar('No se ha importado nada.'),
+       );
+     });
+     return true;
+diff --git a/lib/features/reorder_timers/ui/list_timers.dart b/lib/features/reorder_timers/ui/list_timers.dart
+index 52ea707..df18833 100644
+--- a/lib/features/reorder_timers/ui/list_timers.dart
++++ b/lib/features/reorder_timers/ui/list_timers.dart
+@@ -73,11 +73,11 @@ class _ListTimersReorderableListState extends State<ListTimersReorderableList> {
+         .showSnackBar(
+           SnackBar(
+             behavior: SnackBarBehavior.floating,
+-            content: Text('${item.name} deleted'),
++            content: Text('${item.name} eliminado'),
+             duration: const Duration(seconds: 2),
+             persist: false,
+             action: SnackBarAction(
+-              label: 'Undo',
++              label: 'Deshacer',
+               onPressed: () {
+                 undone = true;
+                 setState(() {
+diff --git a/lib/features/reorder_timers/ui/widgets/tile.dart b/lib/features/reorder_timers/ui/widgets/tile.dart
+index 6719f76..9f2b877 100644
+--- a/lib/features/reorder_timers/ui/widgets/tile.dart
++++ b/lib/features/reorder_timers/ui/widgets/tile.dart
+@@ -30,15 +30,15 @@ class ListTimersTileState extends State<ListTimersTile> {
+   String getTimerDescription() {
+     final timer = widget.timer;
+     final intervalsLabel =
+-        timer.activities.isNotEmpty ? 'Exercises' : 'Intervals';
++        timer.activities.isNotEmpty ? 'Ejercicios' : 'Intervalos';
+     final exerciseTime =
+         timeString(timer.showMinutes, timer.timeSettings.workTime);
+     final restTime = timeString(timer.showMinutes, timer.timeSettings.restTime);
+     final totalTime = (timer.totalTime / 60).round();
+     return '$intervalsLabel - ${timer.activeIntervals}\n'
+-        'Exercise time - $exerciseTime\n'
+-        'Rest time - $restTime\n'
+-        'Total - $totalTime minutes';
++        'Tiempo de ejercicio - $exerciseTime\n'
++        'Tiempo de descanso - $restTime\n'
++        'Total - $totalTime minutos';
+   }
+ 
+   @override
+diff --git a/lib/features/run_timer/widgets/control_bar.dart b/lib/features/run_timer/widgets/control_bar.dart
+index 8287b07..ad0a547 100644
+--- a/lib/features/run_timer/widgets/control_bar.dart
++++ b/lib/features/run_timer/widgets/control_bar.dart
+@@ -72,7 +72,7 @@ class ControlBarState extends State<ControlBar> {
+               ),
+               IconButton(
+                 key: const Key('skip_previous'),
+-                tooltip: 'Skip Previous',
++                tooltip: 'Anterior',
+                 icon: Icon(Icons.skip_previous,
+                     size: MediaQuery.of(context).size.width > 600 ? 45 : 30,
+                     color: Colors.white),
+@@ -80,7 +80,7 @@ class ControlBarState extends State<ControlBar> {
+               ),
+               IconButton(
+                 key: const Key('play_pause'),
+-                tooltip: 'Pause',
++                tooltip: 'Pausa',
+                 icon: Icon(
+                   size: MediaQuery.of(context).size.width > 600 ? 65 : 55,
+                   widget.paused ? Icons.play_arrow : Icons.pause,
+@@ -90,7 +90,7 @@ class ControlBarState extends State<ControlBar> {
+               ),
+               IconButton(
+                 key: const Key('skip_next'),
+-                tooltip: 'Skip Next',
++                tooltip: 'Siguiente',
+                 icon: Icon(Icons.skip_next,
+                     size: MediaQuery.of(context).size.width > 600 ? 45 : 30,
+                     color: Colors.white),
+@@ -98,7 +98,7 @@ class ControlBarState extends State<ControlBar> {
+               ),
+               IconButton(
+                 key: const Key('restart'),
+-                tooltip: 'Restart',
++                tooltip: 'Reiniciar',
+                 icon: Icon(Icons.restart_alt,
+                     size: MediaQuery.of(context).size.width > 600 ? 50 : 35,
+                     color: Colors.white),
+diff --git a/lib/features/run_timer/widgets/landscape_control_bar.dart b/lib/features/run_timer/widgets/landscape_control_bar.dart
+index b2b75b2..4f5614e 100644
+--- a/lib/features/run_timer/widgets/landscape_control_bar.dart
++++ b/lib/features/run_timer/widgets/landscape_control_bar.dart
+@@ -72,7 +72,7 @@ class LandscapeControlBarState extends State<LandscapeControlBar> {
+               ),
+               IconButton(
+                 key: const Key('skip_previous'),
+-                tooltip: 'Skip Previous',
++                tooltip: 'Anterior',
+                 icon: Icon(Icons.skip_previous,
+                     size: MediaQuery.of(context).size.width > 600 ? 45 : 30,
+                     color: Colors.white),
+@@ -80,7 +80,7 @@ class LandscapeControlBarState extends State<LandscapeControlBar> {
+               ),
+               IconButton(
+                 key: const Key('play_pause'),
+-                tooltip: 'Pause',
++                tooltip: 'Pausa',
+                 icon: Icon(
+                   size: MediaQuery.of(context).size.width > 600 ? 60 : 45,
+                   widget.paused ? Icons.play_arrow : Icons.pause,
+@@ -90,7 +90,7 @@ class LandscapeControlBarState extends State<LandscapeControlBar> {
+               ),
+               IconButton(
+                 key: const Key('skip_next'),
+-                tooltip: 'Skip Next',
++                tooltip: 'Siguiente',
+                 icon: Icon(Icons.skip_next,
+                     size: MediaQuery.of(context).size.width > 600 ? 45 : 30,
+                     color: Colors.white),
+@@ -98,7 +98,7 @@ class LandscapeControlBarState extends State<LandscapeControlBar> {
+               ),
+               IconButton(
+                 key: const Key('restart'),
+-                tooltip: 'Restart',
++                tooltip: 'Reiniciar',
+                 icon: Icon(Icons.restart_alt,
+                     size: MediaQuery.of(context).size.width > 600 ? 50 : 35,
+                     color: Colors.white),
+diff --git a/lib/features/run_timer/widgets/models/timer_list_tile_model.dart b/lib/features/run_timer/widgets/models/timer_list_tile_model.dart
+index c45041c..ee3f916 100644
+--- a/lib/features/run_timer/widgets/models/timer_list_tile_model.dart
++++ b/lib/features/run_timer/widgets/models/timer_list_tile_model.dart
+@@ -17,7 +17,7 @@ class TimerListTileModel<E> {
+     if (["Rest", "Warmup", "Cooldown", "Get Ready", "Break"].contains(action)) {
+       return "";
+     }
+-    return "$interval of $total";
++    return "$interval de $total";
+   }
+ 
+   String timeString() {
+diff --git a/lib/features/run_timer/widgets/timer_card_animated.dart b/lib/features/run_timer/widgets/timer_card_animated.dart
+index 8c17537..82afa3f 100644
+--- a/lib/features/run_timer/widgets/timer_card_animated.dart
++++ b/lib/features/run_timer/widgets/timer_card_animated.dart
+@@ -1,3 +1,4 @@
++import 'package:openhiit/core/utils/display_names.dart';
+ import 'package:auto_size_text/auto_size_text.dart';
+ import 'package:flutter/material.dart';
+ import 'package:openhiit/features/run_timer/widgets/models/timer_list_tile_model.dart';
+@@ -120,7 +121,7 @@ class TimerCardItemAnimated extends StatelessWidget {
+                       padding: EdgeInsets.fromLTRB(
+                           8, calcPadding(context), 8.0, calcPadding(context)),
+                       child: AutoSizeText(
+-                        item.action.padRight(50, " "),
++                        displayIntervalName(item.action).padRight(50, " "),
+                         maxLines: 2,
+                         minFontSize: 20,
+                         maxFontSize: 20000,
+diff --git a/lib/features/run_timer/widgets/timer_complete.dart b/lib/features/run_timer/widgets/timer_complete.dart
+index fba3079..b119c8a 100644
+--- a/lib/features/run_timer/widgets/timer_complete.dart
++++ b/lib/features/run_timer/widgets/timer_complete.dart
+@@ -81,14 +81,14 @@ class TimerCompleteState extends State<TimerComplete> {
+             mainAxisAlignment: MainAxisAlignment.center,
+             children: [
+               Text(
+-                'Nice job!',
++                '¡Buen trabajo!',
+                 style: TextStyle(
+                     color: Colors.white,
+                     fontSize: 30.0,
+                     fontWeight: FontWeight.bold),
+               ),
+               Text(
+-                'Completed: ${widget.timerName}',
++                'Completado: ${widget.timerName}',
+                 textAlign: TextAlign.center,
+                 style: TextStyle(
+                     color: Colors.white,
+@@ -107,7 +107,7 @@ class TimerCompleteState extends State<TimerComplete> {
+                     backgroundColor: WidgetStatePropertyAll(
+                         const Color.fromARGB(123, 0, 0, 0))),
+                 icon: const Icon(Icons.arrow_back, color: Colors.white),
+-                label: const Text('Back   ',
++                label: const Text('Volver   ',
+                     style: TextStyle(color: Colors.white)),
+               ),
+               SizedBox(
+@@ -120,7 +120,7 @@ class TimerCompleteState extends State<TimerComplete> {
+                     backgroundColor: WidgetStatePropertyAll(
+                         const Color.fromARGB(123, 0, 0, 0))),
+                 icon: const Icon(Icons.restart_alt, color: Colors.white),
+-                label: const Text('Restart',
++                label: const Text('Repetir',
+                     style: TextStyle(color: Colors.white)),
+               ),
+             ],
+diff --git a/lib/features/run_timer/widgets/timer_list_tile.dart b/lib/features/run_timer/widgets/timer_list_tile.dart
+index 05d9b17..ff62b22 100644
+--- a/lib/features/run_timer/widgets/timer_list_tile.dart
++++ b/lib/features/run_timer/widgets/timer_list_tile.dart
+@@ -62,10 +62,10 @@ class TimerListTileState extends State<TimerListTile>
+             fontSize: 20,
+           ),
+           subtitle: Text(
+-              '''${widget.timer.activities.isNotEmpty ? 'Exercises - ${widget.timer.activeIntervals}' : 'Intervals - ${widget.timer.activeIntervals}'}
+-Exercise time - ${timeString(widget.timer.showMinutes, widget.timer.timeSettings.workTime)}
+-Rest time - ${timeString(widget.timer.showMinutes, widget.timer.timeSettings.restTime)}
+-Total - ${(widget.timer.totalTime / 60).round()} minutes'''),
++              '''${widget.timer.activities.isNotEmpty ? 'Ejercicios - ${widget.timer.activeIntervals}' : 'Intervalos - ${widget.timer.activeIntervals}'}
++Tiempo de ejercicio - ${timeString(widget.timer.showMinutes, widget.timer.timeSettings.workTime)}
++Tiempo de descanso - ${timeString(widget.timer.showMinutes, widget.timer.timeSettings.restTime)}
++Total - ${(widget.timer.totalTime / 60).round()} minutos'''),
+           subtitleTextStyle: const TextStyle(
+             fontWeight: FontWeight.bold,
+           ),
+diff --git a/lib/features/settings/ui/settings.dart b/lib/features/settings/ui/settings.dart
+index c664071..6ab42bc 100644
+--- a/lib/features/settings/ui/settings.dart
++++ b/lib/features/settings/ui/settings.dart
+@@ -19,7 +19,7 @@ class SettingsPage extends StatelessWidget {
+       context: context,
+       builder: (context) => StatefulBuilder(
+         builder: (context, setState) => AlertDialog(
+-          title: const Text('Accent color'),
++          title: const Text('Color de acento'),
+           content: MaterialColorPicker(
+             allowShades: false,
+             selectedColor: pickedColor,
+@@ -30,14 +30,14 @@ class SettingsPage extends StatelessWidget {
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.of(context).pop(),
+-              child: const Text('Cancel'),
++              child: const Text('Cancelar'),
+             ),
+             FilledButton(
+               onPressed: () {
+                 context.read<ThemeProvider>().setSeedColor(pickedColor);
+                 Navigator.of(context).pop();
+               },
+-              child: const Text('Apply'),
++              child: const Text('Aplicar'),
+             ),
+           ],
+         ),
+@@ -51,16 +51,16 @@ class SettingsPage extends StatelessWidget {
+ 
+     return Scaffold(
+       appBar: AppBar(
+-        title: const Text('Settings'),
++        title: const Text('Ajustes'),
+       ),
+       body: SettingsList(
+         sections: [
+           SettingsSection(
+-            title: const Text('Appearance'),
++            title: const Text('Apariencia'),
+             tiles: [
+               SettingsTile(
+                 leading: const Icon(Icons.brightness_6_outlined),
+-                title: const Text('Theme'),
++                title: const Text('Tema'),
+                 trailing: Row(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+@@ -80,8 +80,8 @@ class SettingsPage extends StatelessWidget {
+                 child: ListTile(
+                   leading: const Icon(Icons.palette_outlined),
+                   contentPadding: const EdgeInsets.symmetric(horizontal: 25),
+-                  title: const Text('Accent color'),
+-                  subtitle: const Text('Sets the app theme color'),
++                  title: const Text('Color de acento'),
++                  subtitle: const Text('Color principal de la app'),
+                   trailing: CircleColor(
+                     color: seedColor,
+                     circleSize: 32,
+@@ -98,11 +98,11 @@ class SettingsPage extends StatelessWidget {
+             ],
+           ),
+           SettingsSection(
+-            title: const Text('About'),
++            title: const Text('Acerca de'),
+             tiles: [
+               SettingsTile(
+                 leading: const Icon(Icons.privacy_tip_outlined),
+-                title: const Text('Privacy Policy'),
++                title: const Text('Política de privacidad'),
+                 trailing: const Icon(Icons.open_in_new),
+                 onPressed: (context) async {
+                   final Uri url =
+@@ -114,7 +114,7 @@ class SettingsPage extends StatelessWidget {
+               ),
+               SettingsTile(
+                 leading: const Icon(Icons.info_outline),
+-                title: const Text('Version'),
++                title: const Text('Versión'),
+                 trailing: FutureBuilder<PackageInfo>(
+                   future: PackageInfo.fromPlatform(),
+                   builder: (context, snapshot) => Text(
+@@ -132,9 +132,9 @@ class SettingsPage extends StatelessWidget {
+   }
+ 
+   String _themeModeLabel(ThemeMode mode) => switch (mode) {
+-        ThemeMode.light => 'Light',
+-        ThemeMode.dark => 'Dark',
+-        ThemeMode.system => 'System',
++        ThemeMode.light => 'Claro',
++        ThemeMode.dark => 'Oscuro',
++        ThemeMode.system => 'Sistema',
+       };
+ 
+   void _showThemePicker(BuildContext context) {
+@@ -143,7 +143,7 @@ class SettingsPage extends StatelessWidget {
+     showDialog(
+       context: context,
+       builder: (context) => SimpleDialog(
+-        title: const Text('Theme'),
++        title: const Text('Tema'),
+         children: [
+           RadioGroup<ThemeMode>(
+             groupValue: current,
+@@ -204,8 +204,8 @@ class _VoiceAnnouncementsTileState extends State<_VoiceAnnouncementsTile> {
+       key: const Key('voiceAnnouncementsSwitch'),
+       secondary: const Icon(Icons.record_voice_over_outlined),
+       contentPadding: const EdgeInsets.symmetric(horizontal: 25),
+-      title: const Text('Voice announcements'),
+-      subtitle: const Text('Speaks the current set and round (Spanish)'),
++      title: const Text('Anuncios por voz'),
++      subtitle: const Text('Dice en voz alta la serie y la tanda actuales'),
+       value: _enabled,
+       onChanged: _set,
+     );
+diff --git a/lib/features/whats_new/ui/whats_new_dialog.dart b/lib/features/whats_new/ui/whats_new_dialog.dart
+index cc4ae4b..4d104c2 100644
+--- a/lib/features/whats_new/ui/whats_new_dialog.dart
++++ b/lib/features/whats_new/ui/whats_new_dialog.dart
+@@ -21,7 +21,7 @@ class WhatsNewDialog extends StatelessWidget {
+           mainAxisSize: MainAxisSize.min,
+           children: [
+             Text(
+-              "What’s New in $version",
++              "Novedades de la versión $version",
+               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                     fontWeight: FontWeight.bold,
+                   ),
+@@ -62,7 +62,7 @@ class WhatsNewDialog extends StatelessWidget {
+             FilledButton(
+               onPressed: () => Navigator.of(context).pop(),
+               child: const Text(
+-                "Got it",
++                "Entendido",
+                 key: Key("got_it_button"),
+               ),
+             ),
+diff --git a/lib/features/whats_new/ui/whats_new_items.dart b/lib/features/whats_new/ui/whats_new_items.dart
+index 8bcc939..18a703f 100644
+--- a/lib/features/whats_new/ui/whats_new_items.dart
++++ b/lib/features/whats_new/ui/whats_new_items.dart
+@@ -6,18 +6,18 @@ class WhatsNewData {
+ 
+   static final List<WhatsNewItem> items = [
+     WhatsNewItem(
+-      title: "Swipe to Delete",
+-      description: "Remove timers by swiping left.",
++      title: "Deslizar para eliminar",
++      description: "Elimina temporizadores deslizando hacia la izquierda.",
+       icon: Icons.swipe_left,
+     ),
+     WhatsNewItem(
+-      title: "Break Sound",
+-      description: "Set a custom break sound.",
++      title: "Sonido de descanso largo",
++      description: "Elige un sonido propio para el descanso largo.",
+       icon: Icons.music_note,
+     ),
+     WhatsNewItem(
+-      title: "Settings Page",
+-      description: "Adjust app preferences and appearance.",
++      title: "Página de ajustes",
++      description: "Ajusta las preferencias y el aspecto de la app.",
+       icon: Icons.settings,
+     ),
+   ];
+diff --git a/lib/main.dart b/lib/main.dart
+index fd23085..cae684c 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -3,6 +3,7 @@ import 'dart:io';
+ import 'package:flutter/foundation.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter/services.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:google_fonts/google_fonts.dart';
+ import 'package:openhiit/core/providers/interval_provider/interval_provider.dart';
+ import 'package:openhiit/core/providers/timer_creation_provider/timer_creation_provider.dart';
+@@ -78,6 +79,11 @@ class WorkoutTimer extends StatelessWidget {
+             return MaterialApp(
+               title: 'OpenHIIT',
+               debugShowCheckedModeBanner: false,
++              // App UI is Spanish only; this also translates Material widgets
++              // (dialogs, menus, text selection, tooltips).
++              locale: const Locale('es', 'ES'),
++              supportedLocales: const [Locale('es', 'ES')],
++              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+               theme: themeProvider.lightTheme,
+               darkTheme: themeProvider.darkTheme,
+               themeMode: themeProvider.themeMode,
+diff --git a/pubspec.lock b/pubspec.lock
+index 8844819..e029d65 100644
+--- a/pubspec.lock
++++ b/pubspec.lock
+@@ -299,6 +299,11 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "1.0.3"
++  flutter_localizations:
++    dependency: "direct main"
++    description: flutter
++    source: sdk
++    version: "0.0.0"
+   flutter_material_color_picker:
+     dependency: "direct main"
+     description:
+@@ -391,6 +396,14 @@ packages:
+     description: flutter
+     source: sdk
+     version: "0.0.0"
++  intl:
++    dependency: transitive
++    description:
++      name: intl
++      sha256: "1ca20c894b1717686a2319b8548763d812bc0aabdac580420a44c5178c57a867"
++      url: "https://pub.dev"
++    source: hosted
++    version: "0.20.3"
+   jni:
+     dependency: transitive
+     description:
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 72fed40..0029b56 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -31,6 +31,8 @@ environment:
+ dependencies:
+   flutter:
+     sdk: flutter
++  flutter_localizations:
++    sdk: flutter
+ 
+   path: ^1.9.0
+ 
+-- 
+2.43.0
+

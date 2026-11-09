@@ -1,0 +1,50 @@
+From 2429b131a1b3e839acb12477987ed3a7ca46f4ee Mon Sep 17 00:00:00 2001
+From: aker1305 <aker1305@gmail.com>
+Date: Sun, 8 Nov 2026 08:38:29 +0000
+Subject: [PATCH 4/5] Voice announcements: lower other apps' audio while
+ speaking
+
+Spotify and other music apps covered the announcements. On Android the
+announcer now requests transient audio focus (other apps duck) and uses
+navigation-guidance audio attributes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01X5W6dQ9ZgyihWUfbUDrb4L
+---
+ lib/features/run_timer/voice/voice_announcer.dart | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/lib/features/run_timer/voice/voice_announcer.dart b/lib/features/run_timer/voice/voice_announcer.dart
+index 725e9e9..d83fdc4 100644
+--- a/lib/features/run_timer/voice/voice_announcer.dart
++++ b/lib/features/run_timer/voice/voice_announcer.dart
+@@ -31,6 +31,15 @@ class VoiceAnnouncer {
+       await _tts.setSpeechRate(0.5);
+       await _tts.setPitch(1.0);
+       await _tts.awaitSpeakCompletion(false);
++      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
++        // Same audio type as GPS navigation prompts, so it plays over music.
++        // A failure here must not turn the announcements off.
++        try {
++          await _tts.setAudioAttributesForNavigation();
++        } catch (e) {
++          Log.warning("navigation audio attributes not applied: $e");
++        }
++      }
+       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+         // Play over the silent switch and lower other audio while speaking.
+         await _tts.setIosAudioCategory(
+@@ -74,7 +83,9 @@ class VoiceAnnouncer {
+         // Same volume the timer sounds use (0-100, set by the volume slider).
+         final double volume = _prefs?.getDouble('volume') ?? 80;
+         await _tts.setVolume((volume / 100).clamp(0.0, 1.0));
+-        await _tts.speak(text);
++        // focus: Android asks other apps (Spotify, ...) to lower their volume
++        // while the announcement plays, and restores it afterwards.
++        await _tts.speak(text, focus: true);
+       } catch (e) {
+         Log.error("voice announcement failed", e);
+       }
+-- 
+2.43.0
+
