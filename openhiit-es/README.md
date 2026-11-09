@@ -71,9 +71,9 @@ flutter build apk --release --build-number=60 --android-skip-build-dependency-va
 
 ## Limitaciones conocidas
 
-- Siguen en inglés, porque no son de la app: los textos de licencias de software
-  (Ajustes → Acerca de) y los diálogos de permisos del sistema, que usan el idioma
-  del móvil.
+- Siguen en inglés, porque no son textos de la app: la página web de la Política
+  de privacidad (Ajustes → Acerca de; es la web del proyecto original). Los
+  diálogos de permisos los muestra Android en el idioma del móvil.
 - Verificado con tests unitarios y análisis estático. Los tests de integración
   (necesitan dispositivo) no se han ejecutado. La b58 está probada en el móvil
   (voz con pantalla bloqueada y con Spotify). La b59 solo cambia textos y está
