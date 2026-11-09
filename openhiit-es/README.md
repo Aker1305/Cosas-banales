@@ -73,5 +73,5 @@ flutter build apk --release --build-number=59 --android-skip-build-dependency-va
 
 - La notificación del temporizador en segundo plano sigue en inglés («TIMER»).
 - Verificado con tests unitarios y análisis estático. Los tests de integración
-  (necesitan dispositivo) no se han ejecutado. La voz en segundo plano (b58) está
-  pendiente de confirmar en el móvil.
+  (necesitan dispositivo) no se han ejecutado. La b58 está probada en el móvil:
+  la voz funciona con la pantalla bloqueada y con Spotify sonando.
