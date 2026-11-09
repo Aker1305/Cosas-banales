@@ -14,8 +14,8 @@ class LocalFileUtil {
 
   /// Generates a file name based on the number of timers.
   String _fileTitle(List<TimerType> timers) => timers.length == 1
-      ? "exported_openhiit_timer_${timers[0].name}.json"
-      : "exported_openhiit_timers.json";
+      ? "temporizador_openhiit_${timers[0].name}.json"
+      : "temporizadores_openhiit.json";
 
   /// Returns the local file for the given timers.
   Future<File> _localFile(List<TimerType> timers) async =>

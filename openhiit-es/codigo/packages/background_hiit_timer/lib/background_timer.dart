@@ -159,8 +159,8 @@ class CountdownState extends State<Countdown> with WidgetsBindingObserver {
           autoStartOnBoot: false,
           isForegroundMode: true,
           notificationChannelId: 'timer_foreground',
-          initialNotificationTitle: 'TIMER',
-          initialNotificationContent: 'Initializing',
+          initialNotificationTitle: 'Temporizador',
+          initialNotificationContent: 'Entrenamiento en curso',
           foregroundServiceNotificationId: 888,
           foregroundServiceTypes: [AndroidForegroundType.mediaPlayback]),
       iosConfiguration: IosConfiguration(
@@ -176,8 +176,8 @@ class CountdownState extends State<Countdown> with WidgetsBindingObserver {
   Future<void> _setupNotifications() async {
     const channel = AndroidNotificationChannel(
       'timer_foreground',
-      'TIMER',
-      description: 'This channel is used for important notifications.',
+      'Temporizador',
+      description: 'Aviso que mantiene el temporizador activo con la pantalla bloqueada.',
       importance: Importance.low,
     );
 

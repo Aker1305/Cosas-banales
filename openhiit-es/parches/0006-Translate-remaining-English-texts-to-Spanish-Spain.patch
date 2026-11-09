@@ -1,0 +1,189 @@
+From 7b2c929b9149c32a2c78c79e228b8a986c3a51a5 Mon Sep 17 00:00:00 2001
+From: aker1305 <aker1305@gmail.com>
+Date: Mon, 9 Nov 2026 15:27:24 +0000
+Subject: [PATCH 6/6] Translate remaining English texts to Spanish (Spain)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Background notification: "Temporizador" / "Entrenamiento en curso",
+  channel name and description in Spanish
+- Default exercise name in the editor: "Trabajo" instead of "Work"
+- Import error message and export file names in Spanish
+- Spain Spanish wording: "Color de énfasis", "Campanilla", "Bip"
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01X5W6dQ9ZgyihWUfbUDrb4L
+---
+ lib/features/edit_timer/ui/edit_timer.dart               | 9 +++++----
+ .../ui/widgets/tabs/editor_tab/editor_tab.dart           | 2 +-
+ .../edit_timer/ui/widgets/tabs/sound_tab/constants.dart  | 8 ++++----
+ lib/features/import_export_timers/utils/file_util.dart   | 4 ++--
+ .../import_export_timers/utils/import_export_util.dart   | 7 ++++---
+ lib/features/settings/ui/settings.dart                   | 4 ++--
+ packages/background_hiit_timer/lib/background_timer.dart | 8 ++++----
+ 7 files changed, 22 insertions(+), 20 deletions(-)
+
+diff --git a/lib/features/edit_timer/ui/edit_timer.dart b/lib/features/edit_timer/ui/edit_timer.dart
+index 3d59105..ab9a824 100644
+--- a/lib/features/edit_timer/ui/edit_timer.dart
++++ b/lib/features/edit_timer/ui/edit_timer.dart
+@@ -1,5 +1,6 @@
+ import 'package:flutter/material.dart';
+ import 'package:flutter/rendering.dart';
++import 'package:openhiit/core/utils/display_names.dart';
+ import 'package:openhiit/core/logs/logs.dart';
+ import 'package:openhiit/core/providers/timer_creation_provider/timer_creation_provider.dart';
+ import 'package:openhiit/core/providers/timer_provider/timer_provider.dart';
+@@ -147,8 +148,8 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+       // Add new controllers based on active intervals
+       for (var i = 0; i < timerCreationProvider.timer.activeIntervals; i++) {
+         final text = (i < activities.length && activities[i].trim().isNotEmpty)
+-            ? activities[i].trim()
+-            : 'Work';
++            ? displayIntervalName(activities[i].trim())
++            : 'Trabajo';
+ 
+         editorTabTextControllers.add(TextEditingController(text: text));
+       }
+@@ -159,8 +160,8 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
+           i < timerCreationProvider.timer.activeIntervals;
+           i++) {
+         final text = (i < activities.length && activities[i].trim().isNotEmpty)
+-            ? activities[i].trim()
+-            : 'Work';
++            ? displayIntervalName(activities[i].trim())
++            : 'Trabajo';
+ 
+         editorTabTextControllers.add(TextEditingController(text: text));
+       }
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
+index 964f7fc..c8c2e17 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/editor_tab/editor_tab.dart
+@@ -72,7 +72,7 @@ class EditorTab extends StatelessWidget {
+                     ? (newName) {
+                         provider.timer.activities = controllers
+                             .map((c) =>
+-                                c.text.trim().isEmpty ? "Work" : c.text.trim())
++                                c.text.trim().isEmpty ? "Trabajo" : c.text.trim())
+                             .toList();
+ 
+                         setButtonState(StartSaveState.save);
+diff --git a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
+index 7c24814..8d6b66d 100644
+--- a/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
++++ b/lib/features/edit_timer/ui/widgets/tabs/sound_tab/constants.dart
+@@ -1,16 +1,16 @@
+ const Map<String, String> soundOptions = {
+   "long-bell": "Campana larga",
+   "countdown-beep": "Pitido de cuenta atrás",
+-  "ding-sequence": "Secuencia de ding",
+-  "ding": "Ding",
++  "ding-sequence": "Secuencia de campanillas",
++  "ding": "Campanilla",
+   "halfway-beep2": "Secuencia de pitidos largos",
+   "harsh-beep-sequence": "Secuencia de pitidos fuertes",
+   "harsh-beep": "Pitido fuerte",
+   "horn": "Bocina",
+-  "long-halfway-beep": "Secuencia de blips",
++  "long-halfway-beep": "Secuencia de bips",
+   "long-rest-beep": "Secuencia de pitidos rápidos",
+   "long-whistle": "Silbato largo",
+-  "short-halfway-beep": "Blip",
++  "short-halfway-beep": "Bip",
+   "short-rest-beep": "Pitido",
+   "short-whistle": "Silbato corto",
+   "thunk": "Golpe seco",
+diff --git a/lib/features/import_export_timers/utils/file_util.dart b/lib/features/import_export_timers/utils/file_util.dart
+index ea9534a..51cff3b 100644
+--- a/lib/features/import_export_timers/utils/file_util.dart
++++ b/lib/features/import_export_timers/utils/file_util.dart
+@@ -14,8 +14,8 @@ class LocalFileUtil {
+ 
+   /// Generates a file name based on the number of timers.
+   String _fileTitle(List<TimerType> timers) => timers.length == 1
+-      ? "exported_openhiit_timer_${timers[0].name}.json"
+-      : "exported_openhiit_timers.json";
++      ? "temporizador_openhiit_${timers[0].name}.json"
++      : "temporizadores_openhiit.json";
+ 
+   /// Returns the local file for the given timers.
+   Future<File> _localFile(List<TimerType> timers) async =>
+diff --git a/lib/features/import_export_timers/utils/import_export_util.dart b/lib/features/import_export_timers/utils/import_export_util.dart
+index caa59ac..7a4e991 100644
+--- a/lib/features/import_export_timers/utils/import_export_util.dart
++++ b/lib/features/import_export_timers/utils/import_export_util.dart
+@@ -36,9 +36,10 @@ class ImportExportUtil {
+       }
+       return true;
+     } catch (e) {
+-      Log.error("Error al importar: $e");
++      Log.error("import failed: $e");
+       scaffoldMessengerKey.currentState?.showSnackBar(
+-        errorSnackbar("Error al importar: $e"),
++        errorSnackbar(
++            "No se ha podido importar el archivo. Comprueba que es una exportación de OpenHIIT."),
+       );
+       return false;
+     }
+@@ -54,7 +55,7 @@ class ImportExportUtil {
+       String content = await localFileUtil.readFile(file);
+ 
+       if (!content.startsWith("[")) {
+-        throw Exception("Invalid JSON list.");
++        throw Exception("El archivo no contiene una lista JSON válida.");
+       }
+ 
+       List<dynamic> jsonList = jsonDecode(content);
+diff --git a/lib/features/settings/ui/settings.dart b/lib/features/settings/ui/settings.dart
+index 86d7831..80956fc 100644
+--- a/lib/features/settings/ui/settings.dart
++++ b/lib/features/settings/ui/settings.dart
+@@ -19,7 +19,7 @@ class SettingsPage extends StatelessWidget {
+       context: context,
+       builder: (context) => StatefulBuilder(
+         builder: (context, setState) => AlertDialog(
+-          title: const Text('Color de acento'),
++          title: const Text('Color de énfasis'),
+           content: MaterialColorPicker(
+             allowShades: false,
+             selectedColor: pickedColor,
+@@ -80,7 +80,7 @@ class SettingsPage extends StatelessWidget {
+                 child: ListTile(
+                   leading: const Icon(Icons.palette_outlined),
+                   contentPadding: const EdgeInsets.symmetric(horizontal: 25),
+-                  title: const Text('Color de acento'),
++                  title: const Text('Color de énfasis'),
+                   subtitle: const Text('Color principal de la app'),
+                   trailing: CircleColor(
+                     color: seedColor,
+diff --git a/packages/background_hiit_timer/lib/background_timer.dart b/packages/background_hiit_timer/lib/background_timer.dart
+index 2afca14..3bf015f 100644
+--- a/packages/background_hiit_timer/lib/background_timer.dart
++++ b/packages/background_hiit_timer/lib/background_timer.dart
+@@ -159,8 +159,8 @@ class CountdownState extends State<Countdown> with WidgetsBindingObserver {
+           autoStartOnBoot: false,
+           isForegroundMode: true,
+           notificationChannelId: 'timer_foreground',
+-          initialNotificationTitle: 'TIMER',
+-          initialNotificationContent: 'Initializing',
++          initialNotificationTitle: 'Temporizador',
++          initialNotificationContent: 'Entrenamiento en curso',
+           foregroundServiceNotificationId: 888,
+           foregroundServiceTypes: [AndroidForegroundType.mediaPlayback]),
+       iosConfiguration: IosConfiguration(
+@@ -176,8 +176,8 @@ class CountdownState extends State<Countdown> with WidgetsBindingObserver {
+   Future<void> _setupNotifications() async {
+     const channel = AndroidNotificationChannel(
+       'timer_foreground',
+-      'TIMER',
+-      description: 'This channel is used for important notifications.',
++      'Temporizador',
++      description: 'Aviso que mantiene el temporizador activo con la pantalla bloqueada.',
+       importance: Importance.low,
+     );
+ 
+-- 
+2.43.0
+

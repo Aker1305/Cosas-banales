@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:openhiit/core/utils/display_names.dart';
 import 'package:openhiit/core/logs/logs.dart';
 import 'package:openhiit/core/providers/timer_creation_provider/timer_creation_provider.dart';
 import 'package:openhiit/core/providers/timer_provider/timer_provider.dart';
@@ -147,8 +148,8 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
       // Add new controllers based on active intervals
       for (var i = 0; i < timerCreationProvider.timer.activeIntervals; i++) {
         final text = (i < activities.length && activities[i].trim().isNotEmpty)
-            ? activities[i].trim()
-            : 'Work';
+            ? displayIntervalName(activities[i].trim())
+            : 'Trabajo';
 
         editorTabTextControllers.add(TextEditingController(text: text));
       }
@@ -159,8 +160,8 @@ class _EditTimerState extends State<EditTimer> with TickerProviderStateMixin {
           i < timerCreationProvider.timer.activeIntervals;
           i++) {
         final text = (i < activities.length && activities[i].trim().isNotEmpty)
-            ? activities[i].trim()
-            : 'Work';
+            ? displayIntervalName(activities[i].trim())
+            : 'Trabajo';
 
         editorTabTextControllers.add(TextEditingController(text: text));
       }

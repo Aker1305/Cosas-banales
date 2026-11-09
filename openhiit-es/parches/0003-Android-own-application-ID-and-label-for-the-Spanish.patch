@@ -1,7 +1,7 @@
 From 0fc03721724edf0d7f17494c1ebbb3dce0e5643c Mon Sep 17 00:00:00 2001
 From: aker1305 <aker1305@gmail.com>
 Date: Sat, 7 Nov 2026 18:03:56 +0000
-Subject: [PATCH 3/5] Android: own application ID and label for the Spanish
+Subject: [PATCH 3/6] Android: own application ID and label for the Spanish
  build
 
 applicationId com.aker1305.openhiit_es and label "OpenHIIT ES" so it

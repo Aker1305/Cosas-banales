@@ -1,7 +1,7 @@
 From 28ae5fd2e064be0576736bb61d58bc0d209e0a0a Mon Sep 17 00:00:00 2001
 From: aker1305 <aker1305@gmail.com>
 Date: Sat, 7 Nov 2026 18:03:56 +0000
-Subject: [PATCH 2/5] Translate the app UI to Spanish
+Subject: [PATCH 2/6] Translate the app UI to Spanish
 
 - All visible texts in Spanish (home, editor, sounds, run screen,
   settings, import/export, what's new)

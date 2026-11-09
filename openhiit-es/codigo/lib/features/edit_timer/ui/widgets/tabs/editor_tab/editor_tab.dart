@@ -72,7 +72,7 @@ class EditorTab extends StatelessWidget {
                     ? (newName) {
                         provider.timer.activities = controllers
                             .map((c) =>
-                                c.text.trim().isEmpty ? "Work" : c.text.trim())
+                                c.text.trim().isEmpty ? "Trabajo" : c.text.trim())
                             .toList();
 
                         setButtonState(StartSaveState.save);

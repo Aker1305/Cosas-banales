@@ -36,9 +36,10 @@ class ImportExportUtil {
       }
       return true;
     } catch (e) {
-      Log.error("Error al importar: $e");
+      Log.error("import failed: $e");
       scaffoldMessengerKey.currentState?.showSnackBar(
-        errorSnackbar("Error al importar: $e"),
+        errorSnackbar(
+            "No se ha podido importar el archivo. Comprueba que es una exportación de OpenHIIT."),
       );
       return false;
     }
@@ -54,7 +55,7 @@ class ImportExportUtil {
       String content = await localFileUtil.readFile(file);
 
       if (!content.startsWith("[")) {
-        throw Exception("Invalid JSON list.");
+        throw Exception("El archivo no contiene una lista JSON válida.");
       }
 
       List<dynamic> jsonList = jsonDecode(content);

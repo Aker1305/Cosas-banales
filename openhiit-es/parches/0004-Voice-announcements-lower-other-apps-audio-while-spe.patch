@@ -1,7 +1,7 @@
 From 2429b131a1b3e839acb12477987ed3a7ca46f4ee Mon Sep 17 00:00:00 2001
 From: aker1305 <aker1305@gmail.com>
 Date: Sun, 8 Nov 2026 08:38:29 +0000
-Subject: [PATCH 4/5] Voice announcements: lower other apps' audio while
+Subject: [PATCH 4/6] Voice announcements: lower other apps' audio while
  speaking
 
 Spotify and other music apps covered the announcements. On Android the

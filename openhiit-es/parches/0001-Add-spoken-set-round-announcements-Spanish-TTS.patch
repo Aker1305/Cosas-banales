@@ -1,7 +1,7 @@
 From bd8f610372e91a7040009469b4cac39c9b31081f Mon Sep 17 00:00:00 2001
 From: aker1305 <aker1305@gmail.com>
 Date: Fri, 6 Nov 2026 13:48:15 +0000
-Subject: [PATCH 1/5] Add spoken set/round announcements (Spanish TTS)
+Subject: [PATCH 1/6] Add spoken set/round announcements (Spanish TTS)
 
 At the start of each work interval the app says the current serie
 (block repetition) and tanda (work interval inside the serie), e.g.

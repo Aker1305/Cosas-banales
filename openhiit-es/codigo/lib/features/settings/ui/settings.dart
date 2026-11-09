@@ -19,7 +19,7 @@ class SettingsPage extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Color de acento'),
+          title: const Text('Color de énfasis'),
           content: MaterialColorPicker(
             allowShades: false,
             selectedColor: pickedColor,
@@ -80,7 +80,7 @@ class SettingsPage extends StatelessWidget {
                 child: ListTile(
                   leading: const Icon(Icons.palette_outlined),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 25),
-                  title: const Text('Color de acento'),
+                  title: const Text('Color de énfasis'),
                   subtitle: const Text('Color principal de la app'),
                   trailing: CircleColor(
                     color: seedColor,

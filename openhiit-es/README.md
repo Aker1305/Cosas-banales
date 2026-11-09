@@ -3,7 +3,7 @@
 Versión personal de [OpenHIIT](https://github.com/a-mabe/OpenHIIT) (licencia MIT,
 © Abby Mabe) con:
 
-- Interfaz completa en español.
+- Interfaz completa en español de España, incluida la notificación del temporizador.
 - Anuncios por voz de series y tandas («Serie 2 de 4. Tanda 3 de 8.»).
   - Funcionan con la pantalla bloqueada y en segundo plano.
   - Bajan el volumen de Spotify u otras apps mientras hablan.
@@ -18,13 +18,13 @@ de trabajo dentro de la serie.
 
 | Carpeta | Qué es |
 |---|---|
-| `apk/` | APK listo para instalar (`OpenHIIT-ES-1.7.0-b58.apk`) y su SHA-256. |
+| `apk/` | APK listo para instalar (`OpenHIIT-ES-1.7.0-b59.apk`) y su SHA-256. |
 | `codigo/` | Código fuente completo, listo para compilar. |
-| `parches/` | Los 5 cambios sobre OpenHIIT original, como parches de git. |
+| `parches/` | Los 6 cambios sobre OpenHIIT original, como parches de git. |
 
 ## Instalar
 
-1. Descargar `apk/OpenHIIT-ES-1.7.0-b58.apk` en el móvil y abrirlo.
+1. Descargar `apk/OpenHIIT-ES-1.7.0-b59.apk` en el móvil y abrirlo.
 2. Permitir «Instalar apps desconocidas» si Android lo pide.
 3. Requisitos: Android 7.0 o superior y la voz en español instalada en
    Ajustes → Sistema → Idioma → Salida de texto a voz.
@@ -39,7 +39,7 @@ habría que desinstalar y se perderían los temporizadores no exportados.
 ## Compilar
 
 Base: OpenHIIT commit `f95cf5028eeb4dd7d5255e28266e4aab540e4585`
-(versión 1.7.0+56). El APK b58 se compiló con Flutter 3.47.9 estable.
+(versión 1.7.0+56). El APK b59 se compiló con Flutter 3.47.9 estable.
 
 ```bash
 cd codigo
@@ -50,7 +50,7 @@ cd codigo
 #   storeFile=/ruta/a/openhiit-es.jks
 flutter pub get
 flutter test
-flutter build apk --release --build-number=59 --android-skip-build-dependency-validation
+flutter build apk --release --build-number=60 --android-skip-build-dependency-validation
 ```
 
 - Subir `--build-number` en cada versión nueva para que se instale como actualización.
@@ -71,7 +71,10 @@ flutter build apk --release --build-number=59 --android-skip-build-dependency-va
 
 ## Limitaciones conocidas
 
-- La notificación del temporizador en segundo plano sigue en inglés («TIMER»).
+- Siguen en inglés, porque no son de la app: los textos de licencias de software
+  (Ajustes → Acerca de) y los diálogos de permisos del sistema, que usan el idioma
+  del móvil.
 - Verificado con tests unitarios y análisis estático. Los tests de integración
-  (necesitan dispositivo) no se han ejecutado. La b58 está probada en el móvil:
-  la voz funciona con la pantalla bloqueada y con Spotify sonando.
+  (necesitan dispositivo) no se han ejecutado. La b58 está probada en el móvil
+  (voz con pantalla bloqueada y con Spotify). La b59 solo cambia textos y está
+  pendiente de probar en el móvil.

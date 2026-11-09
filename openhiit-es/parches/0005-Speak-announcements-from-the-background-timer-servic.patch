@@ -1,7 +1,7 @@
 From d90ab9e94f63cac9167238c6356552bf725fa0ce Mon Sep 17 00:00:00 2001
 From: aker1305 <aker1305@gmail.com>
 Date: Mon, 9 Nov 2026 08:44:52 +0000
-Subject: [PATCH 5/5] Speak announcements from the background timer service
+Subject: [PATCH 5/6] Speak announcements from the background timer service
 
 With the screen locked or the app in the background the UI does not
 rebuild, so announcements triggered from the run screen were silent.
